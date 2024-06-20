@@ -20,16 +20,15 @@ Notes:
 ![cpu_multi_threaded_building_bench](results/cpu_multi_threaded_building_bench.PNG)
 *Benchmarked on 6/18/24*
 
-Scene triangle counts
-```
-3,872,303 bistro         
-   56,939 kitchen        
-  143,107 fireplace room 
-2,880,000 hairball       
-5,075,977 san miguel     
-3,746,636 sponza         
-  612,205 courtyard      
-```
+Test Scenes:
+
+- [Bistro](https://developer.nvidia.com/orca/amazon-lumberyard-bistro) `3,872,303 tris` 
+- [Kitchen](https://github.com/DGriffin91/tray_racing/blob/main/assets/obj/kitchen.obj) `56,939 tris` 
+- [Fireplace Room](https://casual-effects.com/data/) `143,107 tris` 
+- [Hairball](https://casual-effects.com/data/) `2,880,000 tris` 
+- [San Miguel](https://casual-effects.com/data/) `5,075,977 tris` 
+- [Sponza](https://www.intel.com/content/www/us/en/developer/topic-technology/graphics-research/samples.html) `3,746,636 tris` 
+- [Courtyard](https://www.unrealengine.com/marketplace/en-US/product/middle-eastern-courtyard) `612,205 tris` 
 
 For GPU benchmarking, please lock GPU/VRAM clocks: [NVIDIA Instructions.](https://developer.nvidia.com/blog/advanced-api-performance-setstablepowerstate/)
 GPU benchmarking requires [dxc](https://github.com/microsoft/DirectXShaderCompiler) to be in `path`.
