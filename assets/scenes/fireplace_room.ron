@@ -1,0 +1,10 @@
+(
+    model_path: "assets/large_obj/fireplace_room/fireplace_room.obj",
+    camera: (
+        eye: (5.0, 1.1, -3.1),
+        look_at: (-5.884918, 1.1, 3.5657463),
+        fov: 90.0,
+        exposure:  -2.0,
+    ),
+    sun_direction: (0.22, -0.1, 0.1),
+)

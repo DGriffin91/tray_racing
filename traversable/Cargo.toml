@@ -1,0 +1,11 @@
+[package]
+name = "traversable"
+version = "0.1.0"
+edition = "2021"
+
+[dependencies]
+obvhs = { git = "https://github.com/DGriffin91/obvhs", features = [
+    "profile",
+    "profile-with-tracing",
+] }
+glam = { version = "0.25", features = ["bytemuck"] }

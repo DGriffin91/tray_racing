@@ -1,0 +1,10 @@
+(
+    model_path: "assets/large_obj/san-miguel/san-miguel-fix.obj",
+    camera: (
+        eye: (22.0, 1.5, 13.0),
+        look_at: (-13.761939, 1.5, -22.647648),
+        fov: 90.0,
+        exposure: 0.0,
+    ),
+    sun_direction: (0.22, -1.0, -0.2),
+)

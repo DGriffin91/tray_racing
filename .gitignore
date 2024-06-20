@@ -1,0 +1,14 @@
+/target
+/assets/large_obj
+*.lib
+*.exe
+.vscode
+Cargo.lock
+output.png
+*.spv
+imgui.ini
+*.bvh
+*_rend.png
+imgui.ini
+*.csv
+*.csv#

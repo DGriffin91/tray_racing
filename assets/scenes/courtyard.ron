@@ -1,0 +1,10 @@
+(
+    model_path: "assets/large_obj/courtyard/courtyard.obj",
+    camera: (
+        eye: (0.01804273, 0.6161912, 5.4391127),
+        look_at: (0.0, 2.0, 0.0),
+        fov: 70.0,
+        exposure: 0.0,
+    ),
+    sun_direction: (0.22, -1.0, -0.2),
+)

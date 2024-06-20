@@ -1,0 +1,20 @@
+[package]
+name = "obvhs_embree"
+version = "0.1.0"
+edition = "2021"
+
+# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+
+[dependencies]
+glam = { version = "0.25", features = ["bytemuck"] }
+half = "2.3.1"
+bytemuck = "1.15"
+radsort = "0.1"
+embree4-sys = { version = "0.0.10" }
+obvhs = { git = "https://github.com/DGriffin91/obvhs", features = [
+    "profile",
+    "profile-with-tracing",
+] }
+traversable = { path = "../traversable/" }
+profiling = "1.0"
+embree4-rs = { git = "https://github.com/DGriffin91/embree4-rs", branch = "obvhs" }
