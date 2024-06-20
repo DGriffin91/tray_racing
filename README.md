@@ -86,3 +86,5 @@ OPTIONS:
         --width <width>                                      Render resolution width. [default: 1920]
         --height <height>                                    Render resolution height. [default: 1080]
 ```
+
+MIT & APACHE 2.0 Licenses don't apply to assets.
