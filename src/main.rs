@@ -18,6 +18,7 @@ use glam::{vec3, Mat4, Vec3, Vec3A};
 use obvhs::{
     bvh2::builder::build_bvh2_from_tris,  ploc::SortPrecision, test_util::geometry::demoscene, triangle::Triangle, BvhBuildParams
 };
+use parry::ParryScene;
 use svenstaro::SvenstaroScene;
 use traversable::SceneRtTri;
 #[cfg(feature = "embree")]
@@ -33,6 +34,7 @@ mod cwbvh;
 mod rt_gpu;
 mod rt_cpu;
 mod svenstaro;
+mod parry;
 
 use obj::Obj;
 #[cfg(feature = "embree")]
@@ -71,7 +73,7 @@ pub struct Options {
         help = "Stop rendering the current scene after n seconds."
     )]
     render_time: f32,
-    #[structopt(long, default_value = "ploc_cwbvh", help = "Specify BVH builder", possible_values  = &["ploc_cwbvh", "ploc_bvh2", "embree_cwbvh", "embree_bvh2_cwbvh", "embree_managed", "svenstaro_bvh2"])]
+    #[structopt(long, default_value = "ploc_cwbvh", help = "Specify BVH builder", possible_values  = &["ploc_cwbvh", "ploc_bvh2", "embree_cwbvh", "embree_bvh2_cwbvh", "embree_managed", "svenstaro_bvh2", "parry_qbvh"])]
     build: String,
     #[structopt(
         long, 
@@ -86,6 +88,12 @@ pub struct Options {
         help = "Below this depth a search distance of 1 will be used for ploc."
     )]
     search_depth_threshold: usize,
+    #[structopt(
+        long,
+        default_value = "3",
+        help = "Maximum primitives per leaf. For CWBVH the limit is 3"
+    )]
+    max_prims_per_leaf: u32,
     #[structopt(long, help = "Use Vulkan hardware RT (requires --hardware feature and alternate wgpu, see cargo.toml)")]
     hardware: bool,
     #[structopt(long, help = "Render on the CPU")]
@@ -138,6 +146,9 @@ pub fn main() {
 
     let mut event_loop = winit::event_loop::EventLoop::new().unwrap();
     let init_options: Options = Options::from_args();
+    if init_options.build.contains("cwbvh") && init_options.max_prims_per_leaf > 3 {
+        panic!("CWBVH only supports a maximum of 3 primitives per leaf.")
+    }
     if init_options.verbose {
         setup_subscriber();
     }
@@ -325,6 +336,12 @@ fn render_from_options(
                         shapes,
                         bvh,
                     })
+                } else if options.build == "parry_qbvh" {
+                    if options.tlas {
+                        todo!("parry_qbvh TLAS not implemented")
+                    }
+                    let parry_scene = ParryScene::new(&objects[0], &mut blas_build_time);
+                    rt_cpu::rt_cpu::start(file_name, &options, &scene, &parry_scene)
                 } else {
                     cwbvh_cpu_runner(&objects, options, &mut blas_build_time, &mut tlas_build_time, file_name, scene, 
                         #[cfg(feature = "embree")] embree_device.as_ref())
@@ -405,7 +422,7 @@ fn build_params_from_options(options: &Options) -> BvhBuildParams {
                 128 => SortPrecision::U128,
                 _ => panic!("Unsupported sort precision"),
             },
-            max_prims_per_leaf: 3,
+            max_prims_per_leaf: options.max_prims_per_leaf,
         },
     }
 }
