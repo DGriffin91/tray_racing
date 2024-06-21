@@ -8,6 +8,20 @@ use obvhs::rt_triangle::RtTriangle;
 use obvhs::triangle::Triangle;
 use traversable::{SceneRtTri, Traversable};
 
+pub fn build_svenstaro_scene(
+    objects: &Vec<Vec<Triangle>>,
+    blas_build_time: &mut f32,
+) -> SvenstaroScene {
+    let mut shapes = svenstaro_bbox_shapes(&*objects[0]);
+    let start_time = std::time::Instant::now();
+    #[cfg(feature = "parallel_build")]
+    let bvh = bvh::bvh::Bvh::build_par(&mut shapes);
+    #[cfg(not(feature = "parallel_build"))]
+    let bvh = bvh::bvh::Bvh::build(&mut shapes);
+    *blas_build_time += start_time.elapsed().as_secs_f32();
+    SvenstaroScene { shapes, bvh }
+}
+
 pub struct TriShape {
     tri: SceneRtTri,
     shape_index: usize,

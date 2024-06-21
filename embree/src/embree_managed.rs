@@ -1,6 +1,34 @@
 use glam::Mat4;
-use obvhs::ray::{Ray, RayHit};
+use obvhs::{
+    ray::{Ray, RayHit},
+    triangle::Triangle,
+};
 use traversable::{SceneTri, Traversable};
+
+pub fn embree_attach_geometry(
+    objects: &Vec<Vec<Triangle>>,
+    device: &embree4_rs::Device,
+    embree_scene: &embree4_rs::Scene,
+    blas_build_time: &mut f32,
+) {
+    for object in objects {
+        let mut verts = Vec::with_capacity(object.len() * 3 * 3);
+        for tri in object.iter() {
+            verts.push((tri.v0.x, tri.v0.y, tri.v0.z));
+            verts.push((tri.v1.x, tri.v1.y, tri.v1.z));
+            verts.push((tri.v2.x, tri.v2.y, tri.v2.z));
+        }
+        let indices = (0..verts.len() as u32)
+            .step_by(3)
+            .map(|i| (i, i + 1, i + 2))
+            .collect::<Vec<_>>();
+        let start_time = std::time::Instant::now();
+        let tri_mesh =
+            embree4_rs::geometry::TriangleMeshGeometry::try_new(&device, &verts, &indices).unwrap();
+        embree_scene.attach_geometry(&tri_mesh).unwrap();
+        *blas_build_time += start_time.elapsed().as_secs_f32();
+    }
+}
 
 pub struct EmbreeSceneAndObjects<'a> {
     pub scene: &'a embree4_rs::CommittedScene<'a>,

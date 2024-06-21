@@ -5,7 +5,9 @@ cargo run --release -- --benchmark --preset very_fast_build --render-time 5.0 -i
 */
 
 use std::{
-    collections::HashMap, fs::File, path::{Path, PathBuf}
+    collections::HashMap,
+    fs::File,
+    path::{Path, PathBuf},
 };
 
 use auto_tune::tune;
@@ -13,32 +15,32 @@ use auto_tune::tune;
 use bvh::bounding_hierarchy::BoundingHierarchy;
 use bytemuck::{Pod, Zeroable};
 
-
 use glam::{vec3, Mat4, Vec3, Vec3A};
 use obvhs::{
-    bvh2::builder::build_bvh2_from_tris,  ploc::SortPrecision, test_util::geometry::demoscene, triangle::Triangle, BvhBuildParams
+    bvh2::builder::build_bvh2_from_tris, ploc::SortPrecision, test_util::geometry::demoscene,
+    triangle::Triangle, BvhBuildParams,
 };
+
 use parry::ParryScene;
-use svenstaro::SvenstaroScene;
+use svenstaro::build_svenstaro_scene;
 use traversable::SceneRtTri;
 #[cfg(feature = "embree")]
 use traversable::SceneTri;
-use crate::svenstaro::svenstaro_bbox_shapes;
 
 mod auto_tune;
 pub mod binding_utils;
 
+mod cwbvh;
+mod parry;
+mod rt_cpu;
+mod rt_gpu;
+mod svenstaro;
 mod timestamp;
 mod verbose;
-mod cwbvh;
-mod rt_gpu;
-mod rt_cpu;
-mod svenstaro;
-mod parry;
 
 use obj::Obj;
 #[cfg(feature = "embree")]
-use obvhs_embree::{new_embree_device, embree_managed::EmbreeSceneAndObjects};
+use obvhs_embree::{embree_managed::{EmbreeSceneAndObjects, embree_attach_geometry}, new_embree_device};
 use ron::de::from_reader;
 use rt_cpu::Bvh2Scene;
 use rt_gpu::cwbvh_gpu_runner;
@@ -94,7 +96,10 @@ pub struct Options {
         help = "Maximum primitives per leaf. For CWBVH the limit is 3"
     )]
     max_prims_per_leaf: u32,
-    #[structopt(long, help = "Use Vulkan hardware RT (requires --hardware feature and alternate wgpu, see cargo.toml)")]
+    #[structopt(
+        long,
+        help = "Use Vulkan hardware RT (requires --hardware feature and alternate wgpu, see cargo.toml)"
+    )]
     hardware: bool,
     #[structopt(long, help = "Render on the CPU")]
     cpu: bool,
@@ -137,7 +142,10 @@ pub struct Options {
     png: bool,
     #[structopt(long, help = "Use tlas (top level acceleration structure)")]
     tlas: bool,
-    #[structopt(long, help = "Use tlas building/traversal path but flatten model into 1 blas.")]
+    #[structopt(
+        long,
+        help = "Use tlas building/traversal path but flatten model into 1 blas."
+    )]
     flatten_blas: bool,
 }
 
@@ -178,18 +186,17 @@ fn render_from_options(
 
     // Don't use raw_device after embree_device is dropped
     #[cfg(feature = "embree")]
-    let embree_device= match options.build.as_str() {
+    let embree_device = match options.build.as_str() {
         "embree_bvh2_cwbvh" | "embree_cwbvh" | "embree_managed" => {
             Some(new_embree_device(threads, options.verbose, true))
-         },
+        }
         _ => None,
     };
 
     let inputs = options.input.split(",").collect::<Vec<_>>();
     let mut stats = Vec::new();
     for input in &inputs {
-
-        let file_name ;
+        let file_name;
         let mut scene: Scene;
 
         let mut objects = if *input == "demoscene" {
@@ -213,7 +220,7 @@ fn render_from_options(
                 Ok(x) => x,
                 Err(e) => {
                     println!("Failed to load config: {}", e);
-    
+
                     std::process::exit(1);
                 }
             };
@@ -233,7 +240,7 @@ fn render_from_options(
                     .unwrap()
                     .join(model_path);
             }
-    
+
             file_name = scene_path.file_stem().unwrap().to_str().unwrap();
             if let Some(model_cache) = model_cache {
                 if let Some(objects) = model_cache.get(&model_path) {
@@ -248,11 +255,14 @@ fn render_from_options(
             }
         };
 
-
         if !options.tlas || options.flatten_blas {
-            // Flatten tris into first object. 
+            // Flatten tris into first object.
             // If transforms are supported in the future they will need to be applied here.
-            objects = vec![objects.into_iter().flatten().into_iter().collect::<Vec<_>>()];
+            objects = vec![objects
+                .into_iter()
+                .flatten()
+                .into_iter()
+                .collect::<Vec<_>>()];
         }
 
         if options.verbose {
@@ -264,13 +274,7 @@ fn render_from_options(
 
         if options.hardware {
             #[cfg(feature = "hardware_rt")]
-            rt_gpu_hardware::start(
-                event_loop,
-                &options,
-                &scene,
-                &objects,
-                options.render_time,
-            );
+            rt_gpu_hardware::start(event_loop, &options, &scene, &objects, options.render_time);
             #[cfg(not(feature = "hardware_rt"))]
             panic!("Need to enable hardware_rt feature and use wgpu ray query PR");
         } else {
@@ -278,80 +282,110 @@ fn render_from_options(
             let mut tlas_build_time = 0.0;
 
             let frame_time = if options.cpu {
-                if options.build == "embree_managed" {
-                    #[cfg(feature = "embree")]
-                    { 
-                        let device = embree_device.as_ref().unwrap();
-                        let embree_scene = embree4_rs::Scene::try_new(&device, Default::default()).unwrap();
-                        embree_scene.set_build_quality(embree4_sys::RTCBuildQuality::HIGH).unwrap();
-                        for object in &objects {
-                            let mut verts = Vec::with_capacity(object.len() * 3 * 3);
-                            for tri in object.iter() {
-                                verts.push((tri.v0.x, tri.v0.y, tri.v0.z));
-                                verts.push((tri.v1.x, tri.v1.y, tri.v1.z));
-                                verts.push((tri.v2.x, tri.v2.y, tri.v2.z));
-                            }
-                            let indices = (0..verts.len() as u32).step_by(3).map(|i|(i, i+1, i+2)).collect::<Vec<_>>();
+                match options.build.as_str() {
+                    "embree_managed" => {
+                        #[cfg(feature = "embree")]
+                        {
+                            let device = embree_device.as_ref().unwrap();
+                            let embree_scene =
+                                embree4_rs::Scene::try_new(&device, Default::default()).unwrap();
+                            embree_scene
+                                .set_build_quality(embree4_sys::RTCBuildQuality::HIGH)
+                                .unwrap();
+                            embree_attach_geometry(
+                                &objects,
+                                device,
+                                &embree_scene,
+                                &mut blas_build_time,
+                            );
                             let start_time = std::time::Instant::now();
-                            let tri_mesh = embree4_rs::geometry::TriangleMeshGeometry::try_new(&device, &verts, &indices).unwrap();
-                            embree_scene.attach_geometry(&tri_mesh).unwrap();
+                            let committed_scene = embree_scene.commit().unwrap();
                             blas_build_time += start_time.elapsed().as_secs_f32();
+                            let objects = objects
+                                .iter()
+                                .map(|mesh| {
+                                    mesh.iter()
+                                        .map(|tri| SceneTri(tri.clone()))
+                                        .collect::<Vec<_>>()
+                                })
+                                .collect::<Vec<_>>();
+                            rt_cpu::rt_cpu::start(
+                                file_name,
+                                &options,
+                                &scene,
+                                &EmbreeSceneAndObjects {
+                                    scene: &committed_scene,
+                                    objects: &objects,
+                                },
+                            )
                         }
-                        let start_time = std::time::Instant::now();
-                        let committed_scene = embree_scene.commit().unwrap();
-                        blas_build_time += start_time.elapsed().as_secs_f32();
-                        let objects = objects.iter().map(|mesh| mesh.iter().map(|tri| SceneTri(tri.clone())).collect::<Vec<_>>()).collect::<Vec<_>>();
-
-                        rt_cpu::rt_cpu::start(file_name, &options, &scene, &EmbreeSceneAndObjects {scene: &committed_scene,  objects: &objects })
+                        #[cfg(not(feature = "embree"))]
+                        panic!("Need to enable embree feature")
                     }
-                    #[cfg(not(feature = "embree"))]
-                    panic!("Need to enable embree feature")
-                } else if options.build == "ploc_bvh2" {
-                    if options.tlas {
-                        todo!("ploc bvh2 TLAS not yet implemented")
+                    "ploc_bvh2" => {
+                        if options.tlas {
+                            todo!("ploc bvh2 TLAS not yet implemented")
+                        }
+                        let bvh = build_bvh2_from_tris(
+                            &objects[0],
+                            build_params_from_options(&options),
+                            &mut blas_build_time,
+                        );
+                        let rt_triangles = bvh
+                            .primitive_indices
+                            .iter()
+                            .map(|i| SceneRtTri((&objects[0][*i as usize]).into()))
+                            .collect::<Vec<SceneRtTri>>();
+                        rt_cpu::rt_cpu::start(
+                            file_name,
+                            &options,
+                            &scene,
+                            &Bvh2Scene {
+                                bvh: &bvh,
+                                tris: rt_triangles.as_slice(),
+                            },
+                        )
                     }
-                    let bvh = build_bvh2_from_tris(
-                        &objects[0],
-                        build_params_from_options(&options),
+                    "svenstaro_bvh2" => {
+                        if options.tlas {
+                            todo!("svenstaro bvh2 TLAS not implemented")
+                        }
+                        let svenstaro_scene = build_svenstaro_scene(&objects, &mut blas_build_time);
+                        rt_cpu::rt_cpu::start(file_name, &options, &scene, &svenstaro_scene)
+                    }
+                    "parry_qbvh" => {
+                        if options.tlas {
+                            todo!("parry_qbvh TLAS not implemented")
+                        }
+                        let parry_scene = ParryScene::new(&objects[0], &mut blas_build_time);
+                        rt_cpu::rt_cpu::start(file_name, &options, &scene, &parry_scene)
+                    }
+                    "embree_cwbvh" | "embree_bvh2_cwbvh" | "ploc_cwbvh" => cwbvh_cpu_runner(
+                        &objects,
+                        options,
                         &mut blas_build_time,
-                    );
-                    let rt_triangles = bvh
-                    .primitive_indices
-                    .iter()
-                    .map(|i| SceneRtTri((&objects[0][*i as usize]).into()))
-                    .collect::<Vec<SceneRtTri>>();
-                    rt_cpu::rt_cpu::start(file_name, &options, &scene, &Bvh2Scene {bvh: &bvh, tris: rt_triangles.as_slice()})
-                } else if options.build == "svenstaro_bvh2" {
-                    if options.tlas {
-                        todo!("svenstaro bvh2 TLAS not implemented")
-                    }
-                    let mut shapes = svenstaro_bbox_shapes(&objects[0]);
-                    let start_time = std::time::Instant::now();
-                    #[cfg(feature = "parallel_build")]
-                    let bvh = bvh::bvh::Bvh::build_par(&mut shapes);
-                    #[cfg(not(feature = "parallel_build"))]
-                    let bvh = bvh::bvh::Bvh::build(&mut shapes);
-                    blas_build_time += start_time.elapsed().as_secs_f32();
-                    rt_cpu::rt_cpu::start(file_name, &options, &scene, &SvenstaroScene {
-                        shapes,
-                        bvh,
-                    })
-                } else if options.build == "parry_qbvh" {
-                    if options.tlas {
-                        todo!("parry_qbvh TLAS not implemented")
-                    }
-                    let parry_scene = ParryScene::new(&objects[0], &mut blas_build_time);
-                    rt_cpu::rt_cpu::start(file_name, &options, &scene, &parry_scene)
-                } else {
-                    cwbvh_cpu_runner(&objects, options, &mut blas_build_time, &mut tlas_build_time, file_name, scene, 
-                        #[cfg(feature = "embree")] embree_device.as_ref())
+                        &mut tlas_build_time,
+                        file_name,
+                        scene,
+                        #[cfg(feature = "embree")]
+                        embree_device.as_ref(),
+                    ),
+                    _ => panic!("No builder specified"),
                 }
             } else {
                 if options.build == "embree_managed" || options.build == "ploc_bvh2" {
                     panic!("{} is --cpu only", options.build);
                 }
-                cwbvh_gpu_runner(event_loop, &objects, options, &mut blas_build_time, &mut tlas_build_time, scene, 
-                    #[cfg(feature = "embree")] embree_device.as_ref())
+                cwbvh_gpu_runner(
+                    event_loop,
+                    &objects,
+                    options,
+                    &mut blas_build_time,
+                    &mut tlas_build_time,
+                    scene,
+                    #[cfg(feature = "embree")]
+                    embree_device.as_ref(),
+                )
             };
 
             stats.push(Stats {
@@ -375,10 +409,9 @@ fn render_from_options(
     if !options.auto_tune {
         println!("{}", Table::new(stats).with(Style::blank()));
     }
+
     (avg_traversal, avg_blas_build, avg_tlas_build)
 }
-
-
 
 #[profiling::function]
 fn load_meshs(model_path: &Path) -> Vec<Vec<Triangle>> {
@@ -386,7 +419,7 @@ fn load_meshs(model_path: &Path) -> Vec<Vec<Triangle>> {
         Ok(objf) => objf,
         Err(e) => panic!("Error while loading obj file {:?}: {}", model_path, e),
     };
-   
+
     let mut objects = Vec::with_capacity(objf.data.objects.len());
     for obj in objf.data.objects {
         let mut triangles = Vec::new();
@@ -395,15 +428,17 @@ fn load_meshs(model_path: &Path) -> Vec<Vec<Triangle>> {
                 let a = objf.data.position[poly.0[0].0].into();
                 let b = objf.data.position[poly.0[1].0].into();
                 let c = objf.data.position[poly.0[2].0].into();
-                triangles.push(Triangle{v0: a, v1: b, v2: c});
+                triangles.push(Triangle {
+                    v0: a,
+                    v1: b,
+                    v2: c,
+                });
             }
         }
         objects.push(triangles);
     }
     objects
 }
-
-
 
 fn build_params_from_options(options: &Options) -> BvhBuildParams {
     match options.preset.as_str() {
@@ -488,5 +523,3 @@ fn seconds_to_hh_mm_ss(seconds: f32) -> String {
 
     format!("{:02}:{:02}:{:02}", hours, minutes, seconds)
 }
-
-
