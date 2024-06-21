@@ -59,10 +59,13 @@ FLAGS:
 OPTIONS:
         --build <build>
             Specify BVH builder [default: ploc_cwbvh]  [possible values: ploc_cwbvh, ploc_bvh2, embree_cwbvh,
-            embree_bvh2_cwbvh, embree_managed, svenstaro_bvh2]
+            embree_bvh2_cwbvh, embree_managed, svenstaro_bvh2, parry_qbvh]
     -i <input>
             Input file path, also supports multiple comma separated paths (use with benchmark & render-time). Use
             `demoscene` for included procedurally generated scene.
+        --max-prims-per-leaf <max-prims-per-leaf>
+            Maximum primitives per leaf. For CWBVH the limit is 3 [default: 3]
+            
         --preset <preset>
             Overrides BVH build options. [default: ]  [possible values: , very_fast_build, fast_build, medium_build,
             slow_build, very_slow_build]
