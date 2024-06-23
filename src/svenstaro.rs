@@ -8,6 +8,9 @@ use obvhs::rt_triangle::RtTriangle;
 use obvhs::triangle::Triangle;
 use traversable::{SceneRtTri, Traversable};
 
+#[cfg(feature = "parallel_build")]
+use bvh::bounding_hierarchy::BoundingHierarchy;
+
 pub fn build_svenstaro_scene(
     objects: &Vec<Vec<Triangle>>,
     blas_build_time: &mut f32,

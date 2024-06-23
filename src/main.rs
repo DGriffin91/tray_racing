@@ -11,8 +11,7 @@ use std::{
 };
 
 use auto_tune::tune;
-#[cfg(feature = "parallel_build")]
-use bvh::bounding_hierarchy::BoundingHierarchy;
+
 use bytemuck::{Pod, Zeroable};
 
 use glam::{vec3, Mat4, Vec3, Vec3A};
