@@ -113,9 +113,15 @@ pub struct Options {
     )]
     reinsertion_batch_ratio: f32,
     #[structopt(
+        long,
+        default_value = "0.0",
+        help = "For BVH2 only, a second pass of reinsertion after collapse. Since collapse reduces the node count, this reinsertion pass will be faster. 0 to disable. Relative to the initial reinsertion_batch_ratio."
+    )]
+    post_collapse_reinsertion_batch_ratio_multiplier: f32,
+    #[structopt(
         long, 
         default_value = "", 
-        possible_values  = &["", "very_fast_build", "fast_build", "medium_build", "slow_build", "very_slow_build"], 
+        possible_values  = &["", "fastest_build", "very_fast_build", "fast_build", "medium_build", "slow_build", "very_slow_build"], 
         help = "Overrides BVH build options.")
     ]
     preset: String,
@@ -146,6 +152,12 @@ pub struct Options {
         help = "Use tlas building/traversal path but flatten model into 1 blas."
     )]
     flatten_blas: bool,
+    #[structopt(
+        long,
+        default_value = "1.0",
+        help = "Multiplier for traversal cost calculation during collapse. A higher value will result in more primitives per leaf."
+    )]
+    collapse_traversal_cost: f32,
 }
 
 pub fn main() {
@@ -441,6 +453,7 @@ fn load_meshs(model_path: &Path) -> Vec<Vec<Triangle>> {
 
 fn build_params_from_options(options: &Options) -> BvhBuildParams {
     match options.preset.as_str() {
+        "fastest_build" => BvhBuildParams::fastest_build(),
         "very_fast_build" => BvhBuildParams::very_fast_build(),
         "fast_build" => BvhBuildParams::fast_build(),
         "medium_build" => BvhBuildParams::medium_build(),
@@ -457,6 +470,8 @@ fn build_params_from_options(options: &Options) -> BvhBuildParams {
                 _ => panic!("Unsupported sort precision"),
             },
             max_prims_per_leaf: options.max_prims_per_leaf,
+            post_collapse_reinsertion_batch_ratio_multiplier: options.post_collapse_reinsertion_batch_ratio_multiplier,
+            collapse_traversal_cost: options.collapse_traversal_cost,
         },
     }
 }

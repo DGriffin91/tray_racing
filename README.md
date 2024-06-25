@@ -11,7 +11,7 @@ Ray Tracing / BVH Building benchmark and tuning utility for [OBVHS](https://gith
 GPU timings are via GPU timestamp queries with locked clocks. 
 
 Notes:
-- vfb/med/vsb are presets in [OBVHS](https://github.com/DGriffin91/obvhs). vfb: very_fast_build, med: medium_build, vsb: very_slow_build. 
+- tfb/vfb/med/vsb are presets in [OBVHS](https://github.com/DGriffin91/obvhs). tfb: fastest_build, vfb: very_fast_build, med: medium_build, vsb: very_slow_build. 
 - Embree CWBVH uses a BVH8 builder with `RTCBuildQuality::HIGH`. 
 - Embree managed is limited to SSE2 as OBVHS does not yet have AVX support. (Embree managed is a bit faster with AVX but not dramatically. OBVHS will eventually also add AVX support)
 ![cpu_traversal_bench](results/cpu_traversal_bench.PNG)
@@ -65,10 +65,14 @@ OPTIONS:
             `demoscene` for included procedurally generated scene.
         --max-prims-per-leaf <max-prims-per-leaf>
             Maximum primitives per leaf. For CWBVH the limit is 3 [default: 3]
-            
+
+        --post-collapse-reinsertion-batch-ratio-multiplier <post-collapse-reinsertion-batch-ratio-multiplier>
+            For BVH2 only, a second pass of reinsertion after collapse. Since collapse reduces the node count, this
+            reinsertion pass will be faster. 0 to disable. Relative to the initial reinsertion_batch_ratio. [default:
+            0.0]
         --preset <preset>
-            Overrides BVH build options. [default: ]  [possible values: , very_fast_build, fast_build, medium_build,
-            slow_build, very_slow_build]
+            Overrides BVH build options. [default: ]  [possible values: , fastest_build, very_fast_build, fast_build,
+            medium_build, slow_build, very_slow_build]
     -r <reinsertion-batch-ratio>
             Typically 0..1: ratio of nodes considered as candidates for reinsertion. Above 1 to evaluate the whole set
             multiple times. A little goes a long way. Try 0.01 or even 0.001 before disabling for build performance.
@@ -89,4 +93,4 @@ OPTIONS:
         --height <height>                                    Render resolution height. [default: 1080]
 ```
 
-MIT & APACHE 2.0 Licenses don't apply to assets.
+MIT & Apache 2.0 Licenses don't apply to assets.
