@@ -14,6 +14,8 @@ Notes:
 - tfb/vfb/med/vsb are presets in [OBVHS](https://github.com/DGriffin91/obvhs). tfb: fastest_build, vfb: very_fast_build, med: medium_build, vsb: very_slow_build. 
 - Embree CWBVH uses a BVH8 builder with `RTCBuildQuality::HIGH`. 
 - Embree managed is limited to SSE2 as OBVHS does not yet have AVX support. (Embree managed is a bit faster with AVX but not dramatically. OBVHS will eventually also add AVX support)
+
+All times are in (milli)seconds. Less is better.
 ![cpu_traversal_bench](results/cpu_traversal_bench.PNG)
 ![gpu_traversal_bench](results/gpu_traversal_bench.PNG)
 ![cpu_single_threaded_building_bench](results/cpu_single_threaded_building_bench.PNG)
