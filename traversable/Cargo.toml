@@ -4,7 +4,7 @@ version = "0.1.0"
 edition = "2021"
 
 [dependencies]
-obvhs = { git = "https://github.com/DGriffin91/obvhs", features = [
+obvhs = { git = "https://github.com/DGriffin91/obvhs", branch = "packet_traversal", features = [
     "profile",
     "profile-with-tracing",
 ] }

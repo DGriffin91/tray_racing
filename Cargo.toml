@@ -27,7 +27,7 @@ glam = { version = "0.25", features = ["bytemuck", "serde"] }
 ron = "0.8"
 serde = { version = "1", features = ["derive"] }
 rayon = "1.10.0"
-obvhs = { git = "https://github.com/DGriffin91/obvhs", features = [
+obvhs = { git = "https://github.com/DGriffin91/obvhs", branch = "packet_traversal", features = [
     "profile",
     "profile-with-tracing",
 ] }

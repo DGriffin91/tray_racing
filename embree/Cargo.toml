@@ -11,7 +11,7 @@ half = "2.3.1"
 bytemuck = "1.15"
 radsort = "0.1"
 embree4-sys = { version = "0.0.10" }
-obvhs = { git = "https://github.com/DGriffin91/obvhs", features = [
+obvhs = { git = "https://github.com/DGriffin91/obvhs", branch = "packet_traversal", features = [
     "profile",
     "profile-with-tracing",
 ] }

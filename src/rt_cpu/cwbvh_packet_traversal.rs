@@ -3,21 +3,25 @@ use std::time::Instant;
 use glam::{uvec2, vec2, vec4, Vec2, Vec3, Vec3A, Vec4Swizzles};
 use image::{ImageBuffer, Rgba};
 use obvhs::{
-    ray::Ray,
+    cwbvh::CwBvh,
+    ray::{Ray, RayHit},
     test_util::sampling::{build_orthonormal_basis, cosine_sample_hemisphere, hash_noise},
 };
 use rayon::{
     iter::{IndexedParallelIterator, IntoParallelIterator, ParallelIterator},
     slice::ParallelSliceMut,
 };
-use traversable::{Intersectable, Traversable};
+use traversable::SceneRtTri;
 
 use crate::{Options, Scene, ViewUniform};
 
-pub fn start<T>(file_name: &str, options: &Options, scene: &Scene, bvh_and_prims: &T) -> f32
-where
-    T: Traversable + Sync,
-{
+pub fn start(
+    file_name: &str,
+    options: &Options,
+    scene: &Scene,
+    bvh: &CwBvh,
+    tris: &Vec<SceneRtTri>,
+) -> f32 {
     let cam = ViewUniform::from_camera(
         &scene.camera,
         options.width as f32,
@@ -34,34 +38,46 @@ where
     loop {
         fragments = (0..options.width * options.height)
             .into_par_iter()
+            .step_by(4)
             .map(|i| {
-                let frag_coord = uvec2(
-                    (i as u32 % options.width) as u32,
-                    (i as u32 / options.width) as u32,
-                );
-                let mut screen_uv = frag_coord.as_vec2() / target_size;
-                screen_uv.y = 1.0 - screen_uv.y;
-                let ndc = screen_uv * 2.0 - Vec2::ONE;
-                let clip_pos = vec4(ndc.x, ndc.y, 1.0, 1.0);
+                let mut rays = [Ray::new_inf(Vec3A::ZERO, Vec3A::ZERO); 4];
+                for ray_n in 0..4usize {
+                    let frag_coord = uvec2(
+                        ((i as u32 + ray_n as u32) % options.width) as u32,
+                        ((i as u32 + ray_n as u32) / options.width) as u32,
+                    );
+                    let mut screen_uv = frag_coord.as_vec2() / target_size;
+                    screen_uv.y = 1.0 - screen_uv.y;
+                    let ndc = screen_uv * 2.0 - Vec2::ONE;
+                    let clip_pos = vec4(ndc.x, ndc.y, 1.0, 1.0);
 
-                let mut vs = cam.proj_inv * clip_pos;
-                vs /= vs.w;
-                let eye: Vec3A = cam.eye.into();
-                let ray = Ray::new(
-                    eye,
-                    (Vec3A::from((cam.view_inv * vs).xyz()) - eye).normalize(),
-                    0.0,
-                    f32::MAX,
-                );
+                    let mut vs = cam.proj_inv * clip_pos;
+                    vs /= vs.w;
+                    let eye: Vec3A = cam.eye.into();
+                    rays[ray_n] = Ray::new(
+                        eye,
+                        (Vec3A::from((cam.view_inv * vs).xyz()) - eye).normalize(),
+                        0.0,
+                        f32::MAX,
+                    );
+                }
 
-                let hit = bvh_and_prims.traverse(ray);
+                //let mut hit = RayHit::none();
+                //bvh.traverse(ray, &mut hit, |ray, id| tris[id].0.intersect(ray));
 
-                let mut col = Vec3::splat(1.0 / hit.t);
+                let mut hits = [RayHit::none(); 4];
+
+                bvh.traverse4(rays, &mut hits, |ray, id| tris[id].0.intersect(ray));
+
+                let col = [
+                    Vec3::splat(1.0 / hits[0].t),
+                    Vec3::splat(1.0 / hits[1].t),
+                    Vec3::splat(1.0 / hits[2].t),
+                    Vec3::splat(1.0 / hits[3].t),
+                ];
 
                 //if hit.t < f32::MAX {
-                //    let mut n = bvh_and_prims
-                //        .get_primitive(hit.geometry_id, hit.primitive_id)
-                //        .compute_normal(&ray);
+                //    let mut n = tris[hit.primitive_id as usize].0.compute_normal();
                 //    n *= n.dot(-ray.direction).signum(); //Double sided
                 //
                 //    let ao_ray_origin = eye + ray.direction * hit.t - ray.direction * 0.01;
@@ -77,7 +93,8 @@ where
                 //
                 //    // Actual AO could use a faster anyhit query.
                 //    // Just using a normal closest query here for simplicity and to create a bit more work for the benchmark.
-                //    let ao_hit = bvh_and_prims.traverse(ao_ray);
+                //    let mut ao_hit = RayHit::none();
+                //    bvh.traverse(ao_ray, &mut ao_hit, |ray, id| tris[id].0.intersect(ray));
                 //
                 //    if ao_hit.t < f32::MAX {
                 //        let ao = ao_hit.t / (1.0 + ao_hit.t);
@@ -101,6 +118,7 @@ where
     }
     let mut img: ImageBuffer<Rgba<u8>, Vec<u8>> = ImageBuffer::new(options.width, options.height);
     let pixels = img.as_mut();
+    let fragments = fragments.iter().flatten().collect::<Vec<_>>();
     pixels.par_chunks_mut(4).enumerate().for_each(|(i, chunk)| {
         let c = (fragments[i].powf(2.2) * 255.0).as_uvec3();
         chunk.copy_from_slice(&[c.x as u8, c.y as u8, c.z as u8, 255]);

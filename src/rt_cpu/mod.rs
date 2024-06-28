@@ -1,3 +1,4 @@
+pub mod cwbvh_packet_traversal;
 pub mod rt_cpu;
 
 use crate::{
@@ -59,15 +60,18 @@ pub fn cwbvh_cpu_runner(
         };
         rt_cpu::start(file_name, &options, &scene, &cwbvh_scene)
     } else {
-        rt_cpu::start(
-            file_name,
-            &options,
-            &scene,
-            &CwBvhScene {
-                bvh: &blas[0],
-                tris: &rt_meshes[0],
-            },
-        )
+        //rt_cpu::start(
+        //    file_name,
+        //    &options,
+        //    &scene,
+        //    &CwBvhScene {
+        //        bvh: &blas[0],
+        //        tris: &rt_meshes[0],
+        //    },
+        //)
+        // TODO need to make actual generic packet traversal test that includes AO
+        // With primary rays it currently seems around 13% faster
+        cwbvh_packet_traversal::start(file_name, &options, &scene, &blas[0], &rt_meshes[0])
     }
 }
 
