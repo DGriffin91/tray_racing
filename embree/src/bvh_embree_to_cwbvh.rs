@@ -1,7 +1,7 @@
 use glam::{UVec3, Vec3A};
 /// This BVH is encoded to a format optimized for GPU traversal based on the CWBVH paper by Ylitie et al.
 /// <https://research.nvidia.com/sites/default/files/publications/ylitie2017hpg-paper.pdf>use glam::{UVec3, Vec3};
-use obvhs::{aabb::Aabb, cwbvh::CwBvhNode, PerComponent, VecExt};
+use obvhs::{aabb::Aabb, cwbvh::node::CwBvhNode, PerComponent, VecExt};
 
 use crate::{bvh_embree, gpu_bvh_builder_embree::USE_EMBREE_PRESPLITS};
 
