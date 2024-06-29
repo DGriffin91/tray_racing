@@ -101,43 +101,43 @@ void main(uint3 invocation_id: SV_DispatchThreadID, uint idx_within_group: SV_Gr
 
         // col = temperature(hit.tri_hit_count * 0.01); // lt blue 10, green 25, yellow 50, orange 70, purp 100
 #else
-
-        if (did_hit)
-        {
-
-            Triangle tri = unpack_triangle(get_bvh_triangle(hit.primitive_id));
-
-            float3 N = normalize(cross(tri.e0, tri.e1));
-            N = N * sign(dot(-ray.direction, N)); // Double sided
-            col = N;
-
-            Ray ao_ray;
-            ao_ray.origin = cam_eye + ray.direction * hit.t - ray.direction * 0.0001; // maybe could be lower
-
-            float3x3 tangent_to_world = build_orthonormal_basis(N);
-            ao_ray.direction = cosine_sample_hemisphere(float2(
-                hash_noise(frag_coord.xy, push_data.frame_count),
-                hash_noise(frag_coord.xy, push_data.frame_count + 1024)));
-            ao_ray.direction = normalize(mul(tangent_to_world, ao_ray.direction));
-
-            RtOutput ao_hit;
-            ao_hit.t = F32_MAX;
-
-            // Actual AO could use a faster anyhit query.
-            // Just using a normal closest query here for simplicity and to create a bit more work for the benchmark.
-            bool ao_did_hit = traverse_bvh(ao_ray, ao_hit);
-
-            if (ao_did_hit)
-            {
-                float3 ao = ao_hit.t / (1.0 + ao_hit.t);
-                col = ao.xxx;
-            }
-            else
-            {
-                col = 1.0;
-            }
-        }
-        col = pow(col, 2.2);
+//
+//        if (did_hit)
+//        {
+//
+//            Triangle tri = unpack_triangle(get_bvh_triangle(hit.primitive_id));
+//
+//            float3 N = normalize(cross(tri.e0, tri.e1));
+//            N = N * sign(dot(-ray.direction, N)); // Double sided
+//            col = N;
+//
+//            Ray ao_ray;
+//            ao_ray.origin = cam_eye + ray.direction * hit.t - ray.direction * 0.0001; // maybe could be lower
+//
+//            float3x3 tangent_to_world = build_orthonormal_basis(N);
+//            ao_ray.direction = cosine_sample_hemisphere(float2(
+//                hash_noise(frag_coord.xy, push_data.frame_count),
+//                hash_noise(frag_coord.xy, push_data.frame_count + 1024)));
+//            ao_ray.direction = normalize(mul(tangent_to_world, ao_ray.direction));
+//
+//            RtOutput ao_hit;
+//            ao_hit.t = F32_MAX;
+//
+//            // Actual AO could use a faster anyhit query.
+//            // Just using a normal closest query here for simplicity and to create a bit more work for the benchmark.
+//            bool ao_did_hit = traverse_bvh(ao_ray, ao_hit);
+//
+//            if (ao_did_hit)
+//            {
+//                float3 ao = ao_hit.t / (1.0 + ao_hit.t);
+//                col = ao.xxx;
+//            }
+//            else
+//            {
+//                col = 1.0;
+//            }
+//        }
+//        col = pow(col, 2.2);
 #endif
         output_texture[frag_coord] = float4(col, 1.0);
     }

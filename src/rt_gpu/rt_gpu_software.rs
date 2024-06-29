@@ -36,7 +36,7 @@ pub fn start(
     let shader_file = if options.tlas {
         "rt_gpu_software_tlas.hlsl"
     } else {
-        "rt_gpu_software.hlsl"
+        "rt_gpu_software_packet.hlsl"
     };
     let src_path = src_dir.join(shader_file);
     let dst_path = src_dir.with_extension("spv");
@@ -278,13 +278,17 @@ async fn start_internal(
                                 if options.benchmark {
                                     // With this extra dispatch, the following timestamp will be much more consistent.
                                     cpass.dispatch_workgroups(
-                                        options.width / 8,
-                                        options.height / 8,
+                                        (options.width / 8) / 2,
+                                        (options.height / 8) / 2,
                                         1,
                                     );
                                     timestamp.start(&mut cpass);
                                 }
-                                cpass.dispatch_workgroups(options.width / 8, options.height / 8, 1);
+                                cpass.dispatch_workgroups(
+                                    (options.width / 8) / 2,
+                                    (options.height / 8) / 2,
+                                    1,
+                                );
                                 //cpass.dispatch_workgroups(784, 1, 1);
                                 if options.benchmark {
                                     timestamp.end(&mut cpass);
