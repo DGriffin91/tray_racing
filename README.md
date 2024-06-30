@@ -20,7 +20,7 @@ All times are in (milli)seconds. Less is better.
 ![gpu_traversal_bench](results/gpu_traversal_bench.PNG)
 ![cpu_single_threaded_building_bench](results/cpu_single_threaded_building_bench.PNG)
 ![cpu_multi_threaded_building_bench](results/cpu_multi_threaded_building_bench.PNG)
-*Benchmarked on 6/18/24*
+*Last updated on 6/30/24*
 
 Test Scenes:
 
