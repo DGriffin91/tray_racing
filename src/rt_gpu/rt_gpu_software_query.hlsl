@@ -388,8 +388,7 @@ bool traverse_bvh(Ray ray, inout RtOutput hit)
         }
         else // There's no nodes left in the current group
         {
-            // Other implementations have this, but assigning the node group to the triangle group when the node group is empty seems incorrect.
-            // triangle_group = current_group;
+            triangle_group = current_group; // For triangle postponing (not yet implemented)
             current_group = uint2(0, 0);
         }
 
