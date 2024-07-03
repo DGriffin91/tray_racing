@@ -32,7 +32,7 @@ pub fn start(
     tri_bytes: &[u8],
     tlas_start: u32,
 ) -> f32 {
-    let src_dir = PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("src/rt_gpu");
+    let src_dir = PathBuf::from(std::env::current_dir().unwrap()).join("src/rt_gpu");
     let shader_file = if options.tlas {
         "rt_gpu_software_tlas.hlsl"
     } else {

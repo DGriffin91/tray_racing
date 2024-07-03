@@ -35,7 +35,7 @@ pub fn start(
     triangles: &[Vec<Triangle>],
     benchmark_seconds: f32,
 ) {
-    let src_dir = PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("src/rt_gpu");
+    let src_dir = PathBuf::from(std::env::current_dir().unwrap()).join("src/rt_gpu");
     let src_path = src_dir.join("rt_gpu_hardware.hlsl");
     let dst_path = src_dir.with_extension("spv");
     let dst_string = dst_path.to_string_lossy();
