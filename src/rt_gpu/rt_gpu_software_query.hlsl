@@ -68,8 +68,8 @@ PackedTriangle get_bvh_triangle(uint idx)
 struct Triangle
 {
     float3 v;
-    float3 e0;
     float3 e1;
+    float3 e2;
 };
 
 Triangle unpack_triangle(PackedTriangle tri)
@@ -79,8 +79,8 @@ Triangle unpack_triangle(PackedTriangle tri)
     float2 ex = unpack_2x16f_uint(tri.e[0]);
     float2 ey = unpack_2x16f_uint(tri.e[1]);
     float2 ez = unpack_2x16f_uint(tri.e[2]);
-    res.e0 = float3(ex.y, ey.y, ez.y);
-    res.e1 = float3(ex.x, ey.x, ez.x);
+    res.e1 = float3(ex.y, ey.y, ez.y);
+    res.e2 = float3(ex.x, ey.x, ez.x);
     return res;
 }
 
@@ -88,8 +88,8 @@ Triangle unpack_triangle(PackedTriangle tri)
 // https://madmann91.github.io/2021/04/29/an-introduction-to-bvhs.html
 bool intersect_ray_tri(Ray ray, Triangle tri, inout float t, inout float2 barycentric)
 {
-    float3 e1 = -tri.e0;
-    float3 e2 = tri.e1;
+    float3 e1 = -tri.e1;
+    float3 e2 = tri.e2;
     float3 ng = cross(e1, e2);
     const bool cull_backface = !true;
 

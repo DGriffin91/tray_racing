@@ -39,7 +39,7 @@ pub fn cwbvh_gpu_runner(
         let tris: Vec<RtCompressedTriangle> = bvh
             .primitive_indices
             .iter()
-            .map(|i| tris[*i as usize].into())
+            .map(|i| (&tris[*i as usize]).into())
             .collect::<Vec<_>>();
         // Remap the tri index in to bvh so that it maps correctly into the tri buffer on the gpu
         bvh.nodes

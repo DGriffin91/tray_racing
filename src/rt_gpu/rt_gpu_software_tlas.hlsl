@@ -114,7 +114,7 @@ void main(uint3 invocation_id: SV_DispatchThreadID, uint idx_within_group: SV_Gr
 
             Triangle tri = unpack_triangle(get_bvh_triangle(hit.primitive_id));
 
-            float3 N = normalize(cross(tri.e0, tri.e1));
+            float3 N = normalize(cross(tri.e1, tri.e2));
             N = N * sign(dot(-ray.direction, N)); // Double sided
             col = N;
 
