@@ -112,6 +112,7 @@ pub fn embree_build_cwbvh_from_tris(
         nodes: converter.nodes,
         primitive_indices: converter.indices,
         total_aabb,
+        exact_node_aabbs: None,
     };
 
     #[cfg(debug_assertions)]
@@ -205,5 +206,6 @@ pub fn embree_build_cwbvh_from_aabbs(
         nodes: converter.nodes,
         primitive_indices: converter.indices,
         total_aabb,
+        exact_node_aabbs: None,
     }
 }

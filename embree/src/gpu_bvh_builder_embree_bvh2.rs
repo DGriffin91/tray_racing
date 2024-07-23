@@ -101,7 +101,7 @@ pub fn embree_build_bvh2_cwbvh_from_tris(
     //timeit!["Reinsertion optimize", reinsertion_optimize(&mut bvh2, config.reinsertion_batch_ratio);];
     //dbg!(&bvh2.print_h(0, 0));
 
-    let mut converter = Bvh2Converter::new(&bvh2);
+    let mut converter = Bvh2Converter::new(&bvh2, true, false);
     converter.calculate_cost(config.max_prims_per_leaf);
     converter.convert_to_cwbvh();
 
@@ -111,6 +111,7 @@ pub fn embree_build_bvh2_cwbvh_from_tris(
         nodes: converter.nodes,
         primitive_indices: converter.primitive_indices.clone(), //TODO shouldn't clone here
         total_aabb,
+        exact_node_aabbs: None,
     };
 
     #[cfg(debug_assertions)]
@@ -208,7 +209,7 @@ pub fn embree_build_bvh2_from_aabbs(
     //timeit!["Reinsertion optimize", reinsertion_optimize(&mut bvh2, config.reinsertion_batch_ratio);];
     //dbg!(&bvh2.print_h(0, 0));
 
-    let mut converter = Bvh2Converter::new(&bvh2);
+    let mut converter = Bvh2Converter::new(&bvh2, true, false);
     converter.calculate_cost(config.max_prims_per_leaf);
     converter.convert_to_cwbvh();
 
@@ -218,6 +219,7 @@ pub fn embree_build_bvh2_from_aabbs(
         nodes: converter.nodes,
         primitive_indices: converter.primitive_indices,
         total_aabb,
+        exact_node_aabbs: None,
     }
 }
 
