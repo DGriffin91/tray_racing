@@ -1,5 +1,7 @@
 /target
 /assets/large_obj
+/assets/json/tg
+/assets/scenes/tg
 *.lib
 *.exe
 .vscode

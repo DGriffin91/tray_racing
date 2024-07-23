@@ -5,9 +5,7 @@ cargo run --release -- --benchmark --preset very_fast_build --render-time 5.0 -i
 */
 
 use std::{
-    collections::HashMap,
-    fs::File,
-    path::{Path, PathBuf},
+    collections::HashMap, fs::File, io::BufReader, path::{Path, PathBuf}
 };
 
 use auto_tune::tune;
@@ -426,29 +424,51 @@ fn render_from_options(
 
 #[profiling::function]
 fn load_meshs(model_path: &Path) -> Vec<Vec<Triangle>> {
-    let objf = match Obj::load(model_path) {
-        Ok(objf) => objf,
-        Err(e) => panic!("Error while loading obj file {:?}: {}", model_path, e),
-    };
-
-    let mut objects = Vec::with_capacity(objf.data.objects.len());
-    for obj in objf.data.objects {
-        let mut triangles = Vec::new();
-        for group in obj.groups {
-            for poly in group.polys {
-                let a = objf.data.position[poly.0[0].0].into();
-                let b = objf.data.position[poly.0[1].0].into();
-                let c = objf.data.position[poly.0[2].0].into();
-                triangles.push(Triangle {
-                    v0: a,
-                    v1: b,
-                    v2: c,
-                });
-            }
+    if model_path.extension().unwrap().to_str().unwrap().contains("json") {
+        // Basic format for json scene with just raw tris:
+        // `[{"v0":[-72.0,3.2,57.3], "v1":[-79.4,3.2,56.7], "v2":[-79.4,11.9,56.7]},` etc...
+        #[derive(Serialize, Deserialize, Debug)]
+        struct JsonTriangle {
+            v0: [f32; 3],
+            v1: [f32; 3],
+            v2: [f32; 3],
         }
-        objects.push(triangles);
+        let file = match File::open(model_path) {
+            Ok(j) => j,
+            Err(e) => panic!("Error while loading json file {:?}: {}", model_path, e),
+        };
+        let reader = BufReader::new(file);
+        let json_triangles: Vec<JsonTriangle> = match serde_json::from_reader(reader) {
+            Ok(j) => j,
+            Err(e) => panic!("Error while loading json file {:?}: {}", model_path, e),
+        };
+        let tris = json_triangles.iter().map(|t| Triangle { v0: t.v0.into(), v1: t.v1.into(), v2: t.v2.into() }).collect::<Vec<_>>();
+        vec![tris]
+    } else {
+        let objf = match Obj::load(model_path) {
+            Ok(objf) => objf,
+            Err(e) => panic!("Error while loading obj file {:?}: {}", model_path, e),
+        };
+
+        let mut objects = Vec::with_capacity(objf.data.objects.len());
+        for obj in objf.data.objects {
+            let mut triangles = Vec::new();
+            for group in obj.groups {
+                for poly in group.polys {
+                    let a = objf.data.position[poly.0[0].0].into();
+                    let b = objf.data.position[poly.0[1].0].into();
+                    let c = objf.data.position[poly.0[2].0].into();
+                    triangles.push(Triangle {
+                        v0: a,
+                        v1: b,
+                        v2: c,
+                    });
+                }
+            }
+            objects.push(triangles);
+        }
+        objects
     }
-    objects
 }
 
 fn build_params_from_options(options: &Options) -> BvhBuildParams {
