@@ -5,6 +5,8 @@ pub mod rt_gpu_hardware;
 pub mod rt_gpu_software;
 pub mod shader_utils;
 
+use std::time::Duration;
+
 use crate::{
     cwbvh::{cwbvh_from_tris, tlas_from_blas},
     Options, Scene,
@@ -17,8 +19,8 @@ pub fn cwbvh_gpu_runner(
     event_loop: &mut EventLoop<()>,
     objects: &Vec<Vec<Triangle>>,
     options: &Options,
-    blas_build_time: &mut f32,
-    tlas_build_time: &mut f32,
+    blas_build_time: &mut Duration,
+    tlas_build_time: &mut Duration,
     scene: Scene,
     #[cfg(feature = "embree")] embree_device: Option<&embree4_rs::Device>,
 ) -> f32 {

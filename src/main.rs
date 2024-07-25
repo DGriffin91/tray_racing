@@ -5,7 +5,7 @@ cargo run --release -- --benchmark --preset very_fast_build --render-time 5.0 -i
 */
 
 use std::{
-    collections::HashMap, fs::File, io::BufReader, path::{Path, PathBuf}
+    collections::HashMap, fs::File, io::BufReader, path::{Path, PathBuf}, time::Duration
 };
 
 use auto_tune::tune;
@@ -287,8 +287,8 @@ fn render_from_options(
             #[cfg(not(feature = "hardware_rt"))]
             panic!("Need to enable hardware_rt feature and use wgpu ray query PR");
         } else {
-            let mut blas_build_time = 0.0;
-            let mut tlas_build_time = 0.0;
+            let mut blas_build_time = Duration::ZERO;
+            let mut tlas_build_time = Duration::ZERO;
 
             let frame_time = if options.cpu {
                 match options.build.as_str() {
@@ -309,7 +309,7 @@ fn render_from_options(
                             );
                             let start_time = std::time::Instant::now();
                             let committed_scene = embree_scene.commit().unwrap();
-                            blas_build_time += start_time.elapsed().as_secs_f32();
+                            blas_build_time += start_time.elapsed();
                             let objects = objects
                                 .iter()
                                 .map(|mesh| {
@@ -400,8 +400,8 @@ fn render_from_options(
             stats.push(Stats {
                 name: file_name.to_string(),
                 traversal_ms: frame_time,
-                blas_build_time_s: blas_build_time,
-                tlas_build_time_ms: tlas_build_time * 1000.0, // Convert to ms
+                blas_build_time_s: blas_build_time.as_secs_f32(),
+                tlas_build_time_ms: (tlas_build_time).as_secs_f32() * 1000.0, // Convert to ms
             });
         }
     }

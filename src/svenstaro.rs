@@ -1,3 +1,5 @@
+use std::time::Duration;
+
 use bvh::bounding_hierarchy::BHShape;
 
 use bvh::bvh::Bvh;
@@ -13,7 +15,7 @@ use bvh::bounding_hierarchy::BoundingHierarchy;
 
 pub fn build_svenstaro_scene(
     objects: &Vec<Vec<Triangle>>,
-    blas_build_time: &mut f32,
+    blas_build_time: &mut Duration,
 ) -> SvenstaroScene {
     let mut shapes = svenstaro_bbox_shapes(&*objects[0]);
     let start_time = std::time::Instant::now();
@@ -21,7 +23,7 @@ pub fn build_svenstaro_scene(
     let bvh = bvh::bvh::Bvh::build_par(&mut shapes);
     #[cfg(not(feature = "parallel_build"))]
     let bvh = bvh::bvh::Bvh::build(&mut shapes);
-    *blas_build_time += start_time.elapsed().as_secs_f32();
+    *blas_build_time += start_time.elapsed();
     SvenstaroScene { shapes, bvh }
 }
 

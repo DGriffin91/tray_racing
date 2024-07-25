@@ -7,7 +7,7 @@ use obvhs::{
     cwbvh::{CwBvh, BRANCHING},
     triangle::Triangle,
 };
-use std::time::Instant;
+use std::time::{Duration, Instant};
 
 use crate::{
     bvh_embree::{self, UserData},
@@ -24,7 +24,7 @@ pub const USE_EMBREE_PRESPLITS: bool = false;
 
 pub fn embree_build_cwbvh_from_tris(
     triangles: &[Triangle],
-    core_build_time: &mut f32,
+    core_build_time: &mut Duration,
     device: *mut embree4_sys::RTCDeviceTy,
 ) -> CwBvh {
     let indices = (0..triangles.len() as u32).map(|i| i).collect::<Vec<u32>>();
@@ -100,7 +100,7 @@ pub fn embree_build_cwbvh_from_tris(
         converter.convert_to_cwbvh(&total_aabb, root);
         converter
     };
-    *core_build_time += start_time.elapsed().as_secs_f32();
+    *core_build_time += start_time.elapsed();
 
     assert!(!converter.nodes.is_empty());
 
@@ -123,7 +123,7 @@ pub fn embree_build_cwbvh_from_tris(
 
 pub fn embree_build_cwbvh_from_aabbs(
     aabbs: &[Aabb],
-    core_build_time: &mut f32,
+    core_build_time: &mut Duration,
     device: *mut embree4_sys::RTCDeviceTy,
 ) -> CwBvh {
     let indices = (0..aabbs.len() as u32).map(|i| i).collect::<Vec<u32>>();
@@ -194,7 +194,7 @@ pub fn embree_build_cwbvh_from_aabbs(
         converter.convert_to_cwbvh(&total_aabb, root);
         converter
     };
-    *core_build_time += start_time.elapsed().as_secs_f32();
+    *core_build_time += start_time.elapsed();
 
     assert!(!converter.nodes.is_empty());
 

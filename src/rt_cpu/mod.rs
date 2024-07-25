@@ -1,5 +1,7 @@
 pub mod rt_cpu;
 
+use std::time::Duration;
+
 use crate::{
     cwbvh::{cwbvh_from_tris, tlas_from_blas, CwBvhScene, CwBvhTlasScene},
     Options, Scene,
@@ -15,8 +17,8 @@ use traversable::{Intersectable, SceneRtTri, Traversable};
 pub fn cwbvh_cpu_runner(
     objects: &Vec<Vec<Triangle>>,
     options: &Options,
-    blas_build_time: &mut f32,
-    tlas_build_time: &mut f32,
+    blas_build_time: &mut Duration,
+    tlas_build_time: &mut Duration,
     file_name: &str,
     scene: Scene,
     #[cfg(feature = "embree")] embree_device: Option<&embree4_rs::Device>,

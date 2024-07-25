@@ -8,14 +8,14 @@ use obvhs::{
     triangle::Triangle,
     BvhBuildParams,
 };
-use std::time::Instant;
+use std::time::{Duration, Instant};
 
 use crate::bvh_embree::{self, UserData};
 
 pub fn embree_build_bvh2_cwbvh_from_tris(
     triangles: &[Triangle],
     config: BvhBuildParams,
-    core_build_time: &mut f32,
+    core_build_time: &mut Duration,
     device: *mut embree4_sys::RTCDeviceTy,
 ) -> CwBvh {
     let indices = (0..triangles.len() as u32).map(|i| i).collect::<Vec<u32>>();
@@ -105,7 +105,7 @@ pub fn embree_build_bvh2_cwbvh_from_tris(
     converter.calculate_cost(config.max_prims_per_leaf);
     converter.convert_to_cwbvh();
 
-    *core_build_time += start_time.elapsed().as_secs_f32();
+    *core_build_time += start_time.elapsed();
 
     let cwbvh = CwBvh {
         nodes: converter.nodes,

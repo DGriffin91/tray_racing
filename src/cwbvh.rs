@@ -7,6 +7,7 @@ use obvhs::{
     ray::{Ray, RayHit},
     triangle::Triangle,
 };
+use std::time::Duration;
 
 #[cfg(feature = "embree")]
 use obvhs_embree::{
@@ -20,7 +21,7 @@ use crate::{build_params_from_options, Options};
 pub fn cwbvh_from_tris(
     triangles: &[Triangle],
     options: &Options,
-    core_build_time: &mut f32,
+    core_build_time: &mut Duration,
     #[cfg(feature = "embree")] embree_device: Option<&embree4_rs::Device>,
 ) -> CwBvh {
     if options.verbose {
@@ -71,7 +72,7 @@ pub fn cwbvh_from_tris(
 pub fn tlas_from_blas(
     blas: &Vec<CwBvh>,
     options: &Options,
-    tlas_build_time: &mut f32,
+    tlas_build_time: &mut Duration,
     #[cfg(feature = "embree")] embree_device: Option<&embree4_rs::Device>,
 ) -> CwBvh {
     let tlas_aabbs = blas.iter().map(|b| b.total_aabb).collect::<Vec<_>>();

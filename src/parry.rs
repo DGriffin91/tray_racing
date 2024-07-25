@@ -1,4 +1,4 @@
-use std::time::Instant;
+use std::time::{Duration, Instant};
 
 use glam::Mat4;
 use nalgebra::{Point, SVector};
@@ -54,7 +54,7 @@ pub struct ParryScene {
 }
 
 impl ParryScene {
-    pub fn new(tris: &[obvhs::triangle::Triangle], core_build_time: &mut f32) -> Self {
+    pub fn new(tris: &[obvhs::triangle::Triangle], core_build_time: &mut Duration) -> Self {
         let parry_tris = tris
             .iter()
             .map(|t| {
@@ -76,7 +76,7 @@ impl ParryScene {
         let mut qbvh = Qbvh::<u32>::new();
         qbvh.clear_and_rebuild(indexed_aabbs.clone(), 0.0);
 
-        *core_build_time += start_time.elapsed().as_secs_f32();
+        *core_build_time += start_time.elapsed();
 
         ParryScene {
             qbvh,

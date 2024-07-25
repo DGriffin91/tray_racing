@@ -1,3 +1,5 @@
+use std::time::Duration;
+
 use glam::Mat4;
 use obvhs::{
     ray::{Ray, RayHit},
@@ -9,7 +11,7 @@ pub fn embree_attach_geometry(
     objects: &Vec<Vec<Triangle>>,
     device: &embree4_rs::Device,
     embree_scene: &embree4_rs::Scene,
-    blas_build_time: &mut f32,
+    blas_build_time: &mut Duration,
 ) {
     for object in objects {
         let mut verts = Vec::with_capacity(object.len() * 3 * 3);
@@ -26,7 +28,7 @@ pub fn embree_attach_geometry(
         let tri_mesh =
             embree4_rs::geometry::TriangleMeshGeometry::try_new(&device, &verts, &indices).unwrap();
         embree_scene.attach_geometry(&tri_mesh).unwrap();
-        *blas_build_time += start_time.elapsed().as_secs_f32();
+        *blas_build_time += start_time.elapsed();
     }
 }
 
