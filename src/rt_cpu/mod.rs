@@ -85,7 +85,7 @@ impl Traversable for Bvh2Scene<'_> {
     fn traverse(&self, ray: Ray) -> RayHit {
         let mut hit = RayHit::none();
         self.bvh
-            .traverse(ray, &mut hit, |ray, id| self.tris[id].intersect(ray));
+            .ray_traverse(ray, &mut hit, |ray, id| self.tris[id].intersect(ray));
         hit
     }
 

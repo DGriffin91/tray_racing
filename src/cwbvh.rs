@@ -112,7 +112,7 @@ impl Traversable for CwBvhTlasScene {
     fn traverse(&self, ray: Ray) -> RayHit {
         let mut hit = RayHit::none();
         self.tlas
-            .traverse_tlas_blas(&self.blas, ray, &mut hit, |ray, geom_id, prim_id| {
+            .ray_traverse_tlas_blas(&self.blas, ray, &mut hit, |ray, geom_id, prim_id| {
                 self.meshes[geom_id][prim_id].0.intersect(ray)
             });
         hit
@@ -141,7 +141,7 @@ impl Traversable for CwBvhScene<'_> {
     fn traverse(&self, ray: Ray) -> RayHit {
         let mut hit = RayHit::none();
         self.bvh
-            .traverse(ray, &mut hit, |ray, id| self.tris[id].0.intersect(ray));
+            .ray_traverse(ray, &mut hit, |ray, id| self.tris[id].0.intersect(ray));
         hit
     }
 
