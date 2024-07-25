@@ -340,6 +340,9 @@ fn render_from_options(
                             build_params_from_options(&options),
                             &mut blas_build_time,
                         );
+                        if options.verbose {
+                            println!("{}", bvh.validate(&objects[0], options.split, false));
+                        }
                         let rt_triangles = bvh
                             .primitive_indices
                             .iter()

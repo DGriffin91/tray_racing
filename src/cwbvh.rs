@@ -64,7 +64,7 @@ pub fn cwbvh_from_tris(
     };
 
     if options.verbose {
-        bvh.validate(split, false, triangles).print();
+        println!("{}", bvh.validate(triangles, split, false));
     }
     bvh
 }
