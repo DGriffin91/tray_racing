@@ -466,6 +466,14 @@ fn load_meshs(model_path: &Path) -> Vec<Vec<Triangle>> {
                         v1: b,
                         v2: c,
                     });
+                    if poly.0.len() == 4 {
+                        let d = objf.data.position[poly.0[3].0].into();
+                        triangles.push(Triangle {
+                            v0: a,
+                            v1: c,
+                            v2: d,
+                        });
+                    }
                 }
             }
             objects.push(triangles);

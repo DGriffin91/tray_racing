@@ -1,0 +1,10 @@
+(
+    model_path: "assets/large_obj/hotel_01.obj",
+    camera: (
+        eye: (-40.0, 32.0, 84.0),
+        look_at: (30.0, -30.0, 0.0),
+        fov: 75.0,
+        exposure: 0.0,
+    ),
+    sun_direction: (0.22, -1.0, -0.2),
+)

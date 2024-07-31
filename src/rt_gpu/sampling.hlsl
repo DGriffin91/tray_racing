@@ -81,3 +81,68 @@ inline float3 temperature(float t)
     const float3 r = wc * c[cur] + wp * c[prv] + wn * c[nxt];
     return float3(clamp(r.x, 0.0f, 1.0f), clamp(r.y, 0.0f, 1.0f), clamp(r.z, 0.0f, 1.0f));
 }
+
+// --------------------------------------
+// --- SomewhatBoringDisplayTransform ---
+// --------------------------------------
+// By Tomasz Stachowiak
+
+float tonemapping_luminance(float3 v)
+{
+    return dot(v, float3(0.2126, 0.7152, 0.0722));
+}
+
+float3 rgb_to_ycbcr(float3 col)
+{
+    float3x3 m = float3x3(
+        0.2126, 0.7152, 0.0722,
+        -0.1146, -0.3854, 0.5,
+        0.5, -0.4542, -0.0458);
+    return mul(m, col);
+}
+
+float3 ycbcr_to_rgb(float3 col)
+{
+    float3x3 m = float3x3(
+        1.0, 0.0, 1.5748,
+        1.0, -0.1873, -0.4681,
+        1.0, 1.8556, 0.0);
+    return max(float3(0.0, 0.0, 0.0), mul(m, col));
+}
+
+float tonemap_curve(float v)
+{
+#if 0
+    // Large linear part in the lows, but compresses highs.
+    float c = v + v * v + 0.5 * v * v * v;
+    return c / (1.0 + c);
+#else
+    return 1.0 - exp(-v);
+#endif
+}
+
+float3 tonemap_curve3(float3 v)
+{
+    return float3(tonemap_curve(v.r), tonemap_curve(v.g), tonemap_curve(v.b));
+}
+
+float3 somewhat_boring_display_transform(float3 col)
+{
+    float3 boring_color = col;
+    float3 ycbcr = rgb_to_ycbcr(boring_color);
+
+    float bt = tonemap_curve(length(ycbcr.yz) * 2.4);
+    float desat = max((bt - 0.7) * 0.8, 0.0);
+    desat *= desat;
+
+    float3 desat_col = lerp(boring_color, ycbcr.xxx, desat);
+
+    float tm_luma = tonemap_curve(ycbcr.x);
+    float3 tm0 = boring_color * max(0.0, tm_luma / max(1e-5, tonemapping_luminance(boring_color.rgb)));
+    float final_mult = 0.97;
+    float3 tm1 = tonemap_curve3(desat_col);
+
+    boring_color = lerp(tm0, tm1, bt * bt);
+
+    return boring_color * final_mult;
+}
