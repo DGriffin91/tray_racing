@@ -8,4 +8,4 @@ obvhs = { git = "https://github.com/DGriffin91/obvhs", features = [
     "profile",
     "profile-with-tracing",
 ] }
-glam = { version = "0.27", features = ["bytemuck"] }
+glam = { version = "0.29", features = ["bytemuck"] }
