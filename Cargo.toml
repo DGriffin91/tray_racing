@@ -6,12 +6,7 @@ edition = "2021"
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
-wgpu = { version = "0.19", features = ["spirv", "vulkan-portability"] }
-# Only Needed if comparing HW RT https://github.com/gfx-rs/wgpu/pull/3631, crashes on exit
-#wgpu = { git = "https://github.com/daniel-keitel/wgpu", rev = "e042a863", features = [
-#    "spirv",
-#    "vulkan-portability",
-#] } # branch = "ray-tracing"
+wgpu = { version = "25.0", features = ["spirv", "vulkan-portability"] }
 
 obj = { version = "0.10.2", features = ["genmesh"] }
 futures = { version = "0.3", default-features = false, features = [
@@ -73,6 +68,3 @@ embree = ["dep:obvhs_embree", "dep:embree4-sys"]
 
 # Traversal is always parallel
 parallel_build = ["obvhs/parallel", "bvh/rayon"]
-
-# Need to also manually use wgpu from PR
-hardware_rt = []

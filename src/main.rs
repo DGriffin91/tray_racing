@@ -41,8 +41,6 @@ use obvhs_embree::{embree_managed::{EmbreeSceneAndObjects, embree_attach_geometr
 use ron::de::from_reader;
 use rt_cpu::Bvh2Scene;
 use rt_gpu::cwbvh_gpu_runner;
-
-#[cfg(feature = "hardware_rt")]
 use rt_gpu::rt_gpu_hardware;
 
 use serde::{Deserialize, Serialize};
@@ -95,7 +93,7 @@ pub struct Options {
     max_prims_per_leaf: u32,
     #[structopt(
         long,
-        help = "Use Vulkan hardware RT (requires --hardware feature and alternate wgpu, see cargo.toml)"
+        help = "Use Vulkan hardware RT"
     )]
     hardware: bool,
     #[structopt(long, help = "Render on the CPU")]
@@ -282,10 +280,7 @@ fn render_from_options(
         }
 
         if options.hardware {
-            #[cfg(feature = "hardware_rt")]
             rt_gpu_hardware::start(event_loop, &options, &scene, &objects, options.render_time);
-            #[cfg(not(feature = "hardware_rt"))]
-            panic!("Need to enable hardware_rt feature and use wgpu ray query PR");
         } else {
             let mut blas_build_time = Duration::ZERO;
             let mut tlas_build_time = Duration::ZERO;

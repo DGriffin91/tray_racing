@@ -11,10 +11,8 @@ use crate::{
 use glam::*;
 use std::{mem, num::NonZeroU64, path::PathBuf, time::Instant};
 use wgpu::{
-    util::{
-        backend_bits_from_env, dx12_shader_compiler_from_env,
-        initialize_adapter_from_env_or_default, make_spirv_raw,
-    },
+    util::{initialize_adapter_from_env_or_default, make_spirv_raw},
+    wgt::CreateShaderModuleDescriptorPassthrough,
     *,
 };
 use winit::{
@@ -82,11 +80,15 @@ async fn start_internal(
         .build(&event_loop)
         .unwrap();
 
-    let backends = backend_bits_from_env().unwrap_or(Backends::PRIMARY);
-    let instance = Instance::new(InstanceDescriptor {
-        backends,
-        dx12_shader_compiler: dx12_shader_compiler_from_env().unwrap_or_default(),
-        ..Default::default()
+    let instance = Instance::new(&InstanceDescriptor {
+        flags: InstanceFlags::default(),
+        backends: Backends::PRIMARY,
+        backend_options: BackendOptions {
+            dx12: Dx12BackendOptions {
+                shader_compiler: Dx12Compiler::default_dynamic_dxc(),
+            },
+            ..Default::default()
+        },
     });
 
     let surface = instance.create_surface(&window).unwrap();
@@ -110,14 +112,13 @@ async fn start_internal(
     limits.max_push_constant_size = 32;
 
     let (device, queue) = adapter
-        .request_device(
-            &DeviceDescriptor {
-                label: None,
-                required_features,
-                required_limits: limits,
-            },
-            None,
-        )
+        .request_device(&DeviceDescriptor {
+            label: None,
+            required_features,
+            required_limits: limits,
+            memory_hints: Default::default(),
+            trace: Trace::Off,
+        })
         .await
         .expect("Failed to create device");
 
@@ -133,7 +134,11 @@ async fn start_internal(
     drop(instance);
     drop(adapter);
 
-    let module = unsafe { device.create_shader_module_spirv(&shader_module) };
+    let module = unsafe {
+        device.create_shader_module_passthrough(CreateShaderModuleDescriptorPassthrough::SpirV(
+            shader_module,
+        ))
+    };
     let output_texture = device.create_texture(&TextureDescriptor {
         label: Some("output_texture"),
         size: Extent3d {
@@ -145,7 +150,11 @@ async fn start_internal(
         sample_count: 1,
         dimension: TextureDimension::D2,
         format: TEXTURE_FORMAT,
-        usage: TextureUsages::all(),
+        usage: TextureUsages::COPY_DST
+            | TextureUsages::COPY_SRC
+            | TextureUsages::RENDER_ATTACHMENT
+            | TextureUsages::TEXTURE_BINDING
+            | TextureUsages::STORAGE_BINDING,
         view_formats: &[],
     });
 
@@ -228,8 +237,9 @@ async fn start_internal(
         label: None,
         layout: Some(&pipeline_layout),
         module: &module,
-        entry_point: "main",
-        //constants: &HashMap::new(),
+        entry_point: Some("main"),
+        compilation_options: Default::default(),
+        cache: None,
     });
 
     let mut sum_ms = 0.0_f64;
@@ -296,13 +306,13 @@ async fn start_internal(
                                 .expect("Failed to acquire next swap chain texture");
 
                             encoder.copy_texture_to_texture(
-                                ImageCopyTextureBase {
+                                TexelCopyTextureInfo {
                                     texture: &output_texture,
                                     mip_level: 0,
                                     origin: Origin3d::ZERO,
                                     aspect: TextureAspect::All,
                                 },
-                                ImageCopyTextureBase {
+                                TexelCopyTextureInfo {
                                     texture: &frame.texture,
                                     mip_level: 0,
                                     origin: Origin3d::ZERO,

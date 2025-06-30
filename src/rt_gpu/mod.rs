@@ -1,6 +1,4 @@
-#[cfg(feature = "hardware_rt")]
 mod acceleration_structure_instance;
-#[cfg(feature = "hardware_rt")]
 pub mod rt_gpu_hardware;
 pub mod rt_gpu_software;
 pub mod shader_utils;

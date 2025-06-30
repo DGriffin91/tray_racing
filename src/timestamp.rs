@@ -74,7 +74,7 @@ impl Timestamp {
 
     pub fn get_ms(&self, device: &Device) -> f32 {
         let timestamp_slice = self.map();
-        device.poll(Maintain::Wait);
+        device.poll(PollType::Wait).unwrap();
         let time_ms = self.unmap(timestamp_slice).as_secs_f32() * 1000.0;
         time_ms
     }

@@ -11,15 +11,9 @@ use crate::{
 use glam::*;
 use obvhs::triangle::Triangle;
 use std::{mem, num::NonZeroU64, path::PathBuf, time::Instant};
+use wgpu::{util::make_spirv_raw, wgt::CreateShaderModuleDescriptorPassthrough};
 use wgpu::{
-    ray_tracing::{self as rt, CommandEncoderRayTracing, DeviceRayTracing},
-    util::make_spirv_raw,
-};
-use wgpu::{
-    util::{
-        backend_bits_from_env, dx12_shader_compiler_from_env,
-        initialize_adapter_from_env_or_default, DeviceExt,
-    },
+    util::{initialize_adapter_from_env_or_default, DeviceExt},
     *,
 };
 use winit::{
@@ -98,11 +92,15 @@ async fn start_internal(
         .build(&event_loop)
         .unwrap();
 
-    let backends = backend_bits_from_env().unwrap_or(Backends::PRIMARY);
-    let instance = Instance::new(InstanceDescriptor {
-        backends,
-        dx12_shader_compiler: dx12_shader_compiler_from_env().unwrap_or_default(),
-        ..Default::default()
+    let instance = Instance::new(&InstanceDescriptor {
+        flags: InstanceFlags::default(),
+        backends: Backends::PRIMARY,
+        backend_options: BackendOptions {
+            dx12: Dx12BackendOptions {
+                shader_compiler: Dx12Compiler::default_dynamic_dxc(),
+            },
+            ..Default::default()
+        },
     });
 
     let surface = instance.create_surface(&window).unwrap();
@@ -114,8 +112,8 @@ async fn start_internal(
     let required_features = Features::TIMESTAMP_QUERY
         | Features::TIMESTAMP_QUERY_INSIDE_PASSES
         | Features::TEXTURE_ADAPTER_SPECIFIC_FORMAT_FEATURES
-        | Features::RAY_QUERY
-        | Features::RAY_TRACING_ACCELERATION_STRUCTURE
+        | Features::EXPERIMENTAL_RAY_QUERY
+        | Features::EXPERIMENTAL_RAY_TRACING_ACCELERATION_STRUCTURE
         | Features::SPIRV_SHADER_PASSTHROUGH
         | Features::PUSH_CONSTANTS;
 
@@ -125,14 +123,13 @@ async fn start_internal(
     limits.max_push_constant_size = 32;
 
     let (device, queue) = adapter
-        .request_device(
-            &DeviceDescriptor {
-                label: None,
-                required_features,
-                required_limits: limits,
-            },
-            None,
-        )
+        .request_device(&DeviceDescriptor {
+            label: None,
+            required_features,
+            required_limits: limits,
+            memory_hints: MemoryHints::default(),
+            trace: Trace::Off,
+        })
         .await
         .expect("Failed to create device");
 
@@ -148,7 +145,11 @@ async fn start_internal(
     drop(instance);
     drop(adapter);
 
-    let module = unsafe { device.create_shader_module_spirv(&shader_module) };
+    let module = unsafe {
+        device.create_shader_module_passthrough(CreateShaderModuleDescriptorPassthrough::SpirV(
+            shader_module,
+        ))
+    };
     let output_texture = device.create_texture(&TextureDescriptor {
         label: Some("output_texture"),
         size: Extent3d {
@@ -160,7 +161,11 @@ async fn start_internal(
         sample_count: 1,
         dimension: TextureDimension::D2,
         format: TEXTURE_FORMAT,
-        usage: TextureUsages::all(),
+        usage: TextureUsages::COPY_DST
+            | TextureUsages::COPY_SRC
+            | TextureUsages::RENDER_ATTACHMENT
+            | TextureUsages::TEXTURE_BINDING
+            | TextureUsages::STORAGE_BINDING,
         view_formats: &[],
     });
 
@@ -177,7 +182,9 @@ async fn start_internal(
             BindGroupLayoutEntry {
                 binding: 5,
                 visibility: ShaderStages::COMPUTE,
-                ty: BindingType::AccelerationStructure,
+                ty: BindingType::AccelerationStructure {
+                    vertex_return: false,
+                },
                 count: None,
             },
         ],
@@ -196,8 +203,9 @@ async fn start_internal(
         label: None,
         layout: Some(&pipeline_layout),
         module: &module,
-        entry_point: "main",
-        //constants: &HashMap::new(),
+        entry_point: Some("main"),
+        compilation_options: Default::default(),
+        cache: None,
     });
 
     let vertex_buffer = device.create_buffer_init(&wgpu::util::BufferInitDescriptor {
@@ -216,29 +224,29 @@ async fn start_internal(
             | wgpu::BufferUsages::STORAGE,
     });
 
-    let blas_geo_size_desc = rt::BlasTriangleGeometrySizeDescriptor {
-        vertex_format: wgpu::VertexFormat::Float32x4,
+    let blas_geo_size_desc = BlasTriangleGeometrySizeDescriptor {
+        vertex_format: wgpu::VertexFormat::Float32x3,
         vertex_count: triangles.len() as u32,
         index_format: Some(wgpu::IndexFormat::Uint32),
         index_count: Some(index_data.len() as u32),
-        flags: rt::AccelerationStructureGeometryFlags::OPAQUE,
+        flags: AccelerationStructureGeometryFlags::OPAQUE,
     };
 
     let blas = device.create_blas(
-        &rt::CreateBlasDescriptor {
+        &CreateBlasDescriptor {
             label: None,
-            flags: rt::AccelerationStructureFlags::PREFER_FAST_TRACE,
-            update_mode: rt::AccelerationStructureUpdateMode::Build,
+            flags: AccelerationStructureFlags::PREFER_FAST_TRACE,
+            update_mode: AccelerationStructureUpdateMode::Build,
         },
-        rt::BlasGeometrySizeDescriptors::Triangles {
-            desc: vec![blas_geo_size_desc.clone()],
+        BlasGeometrySizeDescriptors::Triangles {
+            descriptors: vec![blas_geo_size_desc.clone()],
         },
     );
 
-    let tlas = device.create_tlas(&rt::CreateTlasDescriptor {
+    let tlas = device.create_tlas(&CreateTlasDescriptor {
         label: None,
-        flags: rt::AccelerationStructureFlags::PREFER_FAST_TRACE,
-        update_mode: rt::AccelerationStructureUpdateMode::Build,
+        flags: AccelerationStructureFlags::PREFER_FAST_TRACE,
+        update_mode: AccelerationStructureUpdateMode::Build,
         max_instances: 1,
     });
 
@@ -284,8 +292,8 @@ async fn start_internal(
         ],
     });
 
-    let mut tlas_package = rt::TlasPackage::new(tlas, 1);
-    *tlas_package.get_mut_single(0).unwrap() = Some(rt::TlasInstance::new(
+    let mut tlas_package = TlasPackage::new(tlas);
+    *tlas_package.get_mut_single(0).unwrap() = Some(TlasInstance::new(
         &blas,
         AccelerationStructureInstance::affine_to_rows(&Affine3A::from_rotation_translation(
             Quat::default(),
@@ -298,15 +306,15 @@ async fn start_internal(
     let mut encoder = device.create_command_encoder(&CommandEncoderDescriptor { label: None });
 
     encoder.build_acceleration_structures(
-        std::iter::once(&rt::BlasBuildEntry {
+        std::iter::once(&BlasBuildEntry {
             blas: &blas,
-            geometry: rt::BlasGeometries::TriangleGeometries(vec![rt::BlasTriangleGeometry {
+            geometry: BlasGeometries::TriangleGeometries(vec![BlasTriangleGeometry {
                 size: &blas_geo_size_desc,
                 vertex_buffer: &vertex_buffer,
                 first_vertex: 0,
                 vertex_stride: mem::size_of::<Vec4>() as u64,
                 index_buffer: Some(&index_buffer),
-                index_buffer_offset: Some(0),
+                first_index: Some(0),
                 transform_buffer: None,
                 transform_buffer_offset: None,
             }]),
@@ -375,13 +383,13 @@ async fn start_internal(
                                 .expect("Failed to acquire next swap chain texture");
 
                             encoder.copy_texture_to_texture(
-                                ImageCopyTextureBase {
+                                TexelCopyTextureInfo {
                                     texture: &output_texture,
                                     mip_level: 0,
                                     origin: Origin3d::ZERO,
                                     aspect: TextureAspect::All,
                                 },
-                                ImageCopyTextureBase {
+                                TexelCopyTextureInfo {
                                     texture: &frame.texture,
                                     mip_level: 0,
                                     origin: Origin3d::ZERO,
