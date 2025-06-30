@@ -33,28 +33,13 @@ pub struct TriShape {
     node_index: usize,
 }
 
-pub const EPSILON: f32 = 1e-5;
-
 impl bvh::aabb::Bounded<f32, 3> for TriShape {
     fn aabb(&self) -> bvh::aabb::Aabb<f32, 3> {
         let aabb = self.tri.0.aabb();
-        let mut aabb = bvh::aabb::Aabb::with_bounds(
+        bvh::aabb::Aabb::with_bounds(
             Point::<f32, 3>::from(Into::<[f32; 3]>::into(aabb.min)),
             Point::<f32, 3>::from(Into::<[f32; 3]>::into(aabb.max)),
-        );
-        let size = aabb.size();
-        // In svenstaro bvh, if the triangle is axis aligned the resulting AABB will have no size on that axis
-        // and rays will not intersect the AABB during BVH traversal.
-        if size.x < EPSILON {
-            aabb.max.x += EPSILON;
-        }
-        if size.y < EPSILON {
-            aabb.max.y += EPSILON;
-        }
-        if size.z < EPSILON {
-            aabb.max.z += EPSILON;
-        }
-        aabb
+        )
     }
 }
 
