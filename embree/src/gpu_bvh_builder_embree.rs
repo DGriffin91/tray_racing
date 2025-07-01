@@ -116,7 +116,7 @@ pub fn embree_build_cwbvh_from_tris(
     };
 
     #[cfg(debug_assertions)]
-    gpu_bvh.validate(USE_EMBREE_PRESPLITS, false, triangles);
+    gpu_bvh.validate(triangles, USE_EMBREE_PRESPLITS, false);
 
     gpu_bvh
 }

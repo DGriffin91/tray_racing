@@ -115,7 +115,7 @@ pub fn embree_build_bvh2_cwbvh_from_tris(
     };
 
     #[cfg(debug_assertions)]
-    cwbvh.validate(false, false, triangles);
+    cwbvh.validate(triangles, false, false);
 
     cwbvh
 }

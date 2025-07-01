@@ -16,7 +16,11 @@ use obvhs_embree::{
 };
 use traversable::{SceneRtTri, Traversable};
 
-use crate::{build_params_from_options, Options};
+use crate::{
+    build_params_from_options,
+    tinybvh::{self, convert_tinybvh_cwbvh},
+    Options,
+};
 
 pub fn cwbvh_from_tris(
     triangles: &[Triangle],
@@ -55,6 +59,41 @@ pub fn cwbvh_from_tris(
         }
         #[cfg(not(feature = "embree"))]
         panic!("Embree feature not enabled")
+    } else if options.build.contains("tinybvh_cwbvh") {
+        #[cfg(feature = "tinybvh")]
+        {
+            if options.tlas {
+                todo!("tinybvh_cwbvh TLAS not implemented")
+            }
+            let tinybvh_scene = tinybvh::TinyBvhCwbvhScene::new(
+                &triangles,
+                core_build_time,
+                options.build.contains("hq"),
+            );
+            let cwbvh = CwBvh {
+                nodes: tinybvh_scene
+                    .cwbvh
+                    .nodes()
+                    .iter()
+                    .map(|node| convert_tinybvh_cwbvh(node))
+                    .collect(),
+                primitive_indices: tinybvh_scene
+                    .cwbvh
+                    .primitives()
+                    .iter()
+                    .map(|prim| prim.original_primitive)
+                    .collect(),
+                total_aabb: convert_tinybvh_cwbvh(&tinybvh_scene.cwbvh.nodes()[0]).aabb(),
+                exact_node_aabbs: None,
+            };
+            let _result = std::panic::catch_unwind(|| {
+                // catch_unwind here because TRAVERSAL_STACK_SIZE > 32 on Bistro and San Miguel
+                cwbvh.validate(&triangles, options.build.contains("hq"), false);
+            });
+            cwbvh
+        }
+        #[cfg(not(feature = "tinybvh"))]
+        panic!("Need to enable tinybvh feature")
     } else if options.build.contains("ploc_cwbvh") {
         let config = build_params_from_options(options);
         split = config.pre_split;
