@@ -27,6 +27,8 @@ use traversable::SceneTri;
 mod auto_tune;
 pub mod binding_utils;
 
+#[cfg(feature = "tinybvh")]
+mod tinybvh;
 mod cwbvh;
 mod parry;
 mod rt_cpu;
@@ -47,7 +49,7 @@ use serde::{Deserialize, Serialize};
 use structopt::StructOpt;
 use tabled::{settings::Style, Table, Tabled};
 
-use crate::verbose::setup_subscriber;
+use crate::{ verbose::setup_subscriber};
 
 use crate::rt_cpu::cwbvh_cpu_runner;
 
@@ -70,7 +72,7 @@ pub struct Options {
         help = "Stop rendering the current scene after n seconds."
     )]
     render_time: f32,
-    #[structopt(long, default_value = "ploc_cwbvh", help = "Specify BVH builder", possible_values  = &["ploc_cwbvh", "ploc_bvh2", "embree_cwbvh", "embree_bvh2_cwbvh", "embree_managed", "svenstaro_bvh2", "parry_qbvh"])]
+    #[structopt(long, default_value = "ploc_cwbvh", help = "Specify BVH builder", possible_values  = &["ploc_cwbvh", "ploc_bvh2", "embree_cwbvh", "embree_bvh2_cwbvh", "embree_managed", "svenstaro_bvh2", "parry_qbvh", "tinybvh_bvh2", "tinybvh_cwbvh"])]
     build: String,
     #[structopt(
         long, 
@@ -366,6 +368,31 @@ fn render_from_options(
                         }
                         let parry_scene = ParryScene::new(&objects[0], &mut blas_build_time);
                         rt_cpu::rt_cpu::start(file_name, &options, &scene, &parry_scene)
+                    }
+                    "tinybvh_bvh2" => {
+                        #[cfg(feature = "tinybvh")]
+                        {
+                            if options.tlas {
+                                todo!("tinybvh_bvh2 TLAS not implemented")
+                            }
+                            let tinybvh_scene = tinybvh::TinyBvhScene::new(&objects[0], &mut blas_build_time);
+                            rt_cpu::rt_cpu::start(file_name, &options, &scene, &tinybvh_scene)
+                        }
+                        #[cfg(not(feature = "tinybvh"))]
+                        panic!("Need to enable tinybvh feature")
+                    }
+                    "tinybvh_cwbvh" => {
+                        #[cfg(feature = "tinybvh")]
+                        {
+                            if options.tlas {
+                                todo!("tinybvh_cwbvh TLAS not implemented")
+                            }
+                            println!("tinybvh_cwbvh traversal is not currently working");
+                            let tinybvh_scene = tinybvh::TinyBvhCwbvhScene::new(&objects[0], &mut blas_build_time);
+                            rt_cpu::rt_cpu::start(file_name, &options, &scene, &tinybvh_scene)
+                        }
+                        #[cfg(not(feature = "tinybvh"))]
+                        panic!("Need to enable tinybvh feature")
                     }
                     "embree_cwbvh" | "embree_bvh2_cwbvh" | "ploc_cwbvh" => cwbvh_cpu_runner(
                         &objects,

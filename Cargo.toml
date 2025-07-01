@@ -35,6 +35,11 @@ bvh = { version = "0.11", default-features = false }
 nalgebra = { version = "0.33" } # Only for svenstaro & parry3d bvh crates
 parry3d = "0.21.1"
 serde_json = "1.0"
+tinybvh-rs = { version = "0.1.0-beta.2", optional = true } # No support for cwbvh traversal
+#tinybvh-rs = { git = "https://github.com/DGriffin91/tinybvh-rs", rev = "enable_cwbvh", optional = true }
+# Haven't been able to get CWBVH to work. 
+# With `tinybvh @ 33f2158` I always get back prim 0
+# With `tinybvh @ c3972f9` I get back various prims but image looks like grey noise
 
 obvhs_embree = { path = "embree/", optional = true }
 embree4-sys = { version = "0.0.10", optional = true }
@@ -63,8 +68,9 @@ opt-level = 3
 
 
 [features]
-#default = ["embree"]
+#default = ["tinybvh", "embree"]
 embree = ["dep:obvhs_embree", "dep:embree4-sys"]
+tinybvh = ["dep:tinybvh-rs"]
 
 # Traversal is always parallel
 parallel_build = ["obvhs/parallel", "bvh/rayon"]
