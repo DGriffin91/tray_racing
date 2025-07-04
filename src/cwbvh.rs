@@ -16,11 +16,10 @@ use obvhs_embree::{
 };
 use traversable::{SceneRtTri, Traversable};
 
-use crate::{
-    build_params_from_options,
-    tinybvh::{self, convert_tinybvh_cwbvh},
-    Options,
-};
+use crate::{build_params_from_options, Options};
+
+#[cfg(feature = "tinybvh")]
+use crate::tinybvh::{self, convert_tinybvh_cwbvh};
 
 pub fn cwbvh_from_tris(
     triangles: &[Triangle],
