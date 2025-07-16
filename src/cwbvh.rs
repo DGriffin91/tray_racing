@@ -31,8 +31,6 @@ pub fn cwbvh_from_tris(
         println!("Building BVH with {}", options.build);
     }
 
-    #[allow(unused_assignments)]
-    let mut split = options.split;
     let bvh = if options.build == "embree_cwbvh" {
         #[cfg(feature = "embree")]
         {
@@ -95,14 +93,13 @@ pub fn cwbvh_from_tris(
         panic!("Need to enable tinybvh feature")
     } else if options.build.contains("ploc_cwbvh") {
         let config = build_params_from_options(options);
-        split = config.pre_split;
         build_cwbvh_from_tris(triangles, config, core_build_time)
     } else {
         panic!("NO BVH BUILDER SPECIFIED")
     };
 
     if options.verbose {
-        println!("{}", bvh.validate(triangles, split, false));
+        println!("{}", bvh.validate(triangles, false));
     }
     bvh
 }

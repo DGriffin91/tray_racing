@@ -72,7 +72,7 @@ pub struct Options {
         help = "Stop rendering the current scene after n seconds."
     )]
     render_time: f32,
-    #[structopt(long, default_value = "ploc_cwbvh", help = "Specify BVH builder", possible_values  = &["ploc_cwbvh", "ploc_bvh2", "embree_cwbvh", "embree_bvh2_cwbvh", "embree_managed", "svenstaro_bvh2", "parry_qbvh", "tinybvh_bvh2", "tinybvh_cwbvh", "tinybvh_cwbvh_hq"])]
+    #[structopt(long, default_value = "ploc_cwbvh", help = "Specify BVH builder", possible_values  = &["ploc_cwbvh", "ploc_bvh2", "embree_cwbvh", "embree_bvh2_cwbvh", "embree_managed", "svenstaro_bvh2", "parry_bvh", "tinybvh_bvh2", "tinybvh_cwbvh", "tinybvh_cwbvh_hq"])]
     build: String,
     #[structopt(
         long, 
@@ -362,9 +362,9 @@ fn render_from_options(
                         let svenstaro_scene = build_svenstaro_scene(&objects, &mut blas_build_time);
                         rt_cpu::rt_cpu::start(file_name, &options, &scene, &svenstaro_scene)
                     }
-                    "parry_qbvh" => {
+                    "parry_bvh" => {
                         if options.tlas {
-                            todo!("parry_qbvh TLAS not implemented")
+                            todo!("parry_bvh TLAS not implemented")
                         }
                         let parry_scene = ParryScene::new(&objects[0], &mut blas_build_time);
                         rt_cpu::rt_cpu::start(file_name, &options, &scene, &parry_scene)

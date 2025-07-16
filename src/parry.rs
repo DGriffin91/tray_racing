@@ -1,14 +1,9 @@
-use std::time::{Duration, Instant};
-
 use glam::Mat4;
 use nalgebra::{Point, SVector};
 use obvhs::ray::{Ray, RayHit};
-use parry3d::{
-    math::{Isometry, Real},
-    partitioning::Qbvh,
-    query::details::{NormalConstraints, RayCompositeShapeToiBestFirstVisitor},
-    shape::{Shape, TrianglePseudoNormals, TypedSimdCompositeShape},
-};
+use parry3d::query::RayCast;
+use parry3d::shape::TriMesh;
+use std::time::{Duration, Instant};
 use traversable::{SceneTri, Traversable};
 
 impl Traversable for ParryScene {
@@ -20,12 +15,21 @@ impl Traversable for ParryScene {
             Point::<f32, 3>::from(Into::<[f32; 3]>::into(ray.origin)),
             SVector::<f32, 3>::from(Into::<[f32; 3]>::into(ray.direction)),
         );
-        let mut visitor =
-            RayCompositeShapeToiBestFirstVisitor::new(&self, &ray_s, f32::INFINITY, false);
 
-        if let Some((primitive_id, t)) =
-            self.qbvh.traverse_best_first(&mut visitor).map(|res| res.1)
-        {
+        let hit = self
+            .tri_mesh
+            .bvh()
+            .cast_ray(&ray_s, f32::MAX, |primitive, best_so_far| {
+                if let Some(hit) =
+                    self.parry_tris[primitive as usize].cast_local_ray(&ray_s, best_so_far, true)
+                {
+                    if hit < best_so_far {
+                        return Some(hit);
+                    }
+                }
+                None
+            });
+        if let Some((primitive_id, t)) = hit {
             RayHit {
                 primitive_id,
                 t,
@@ -48,74 +52,38 @@ impl Traversable for ParryScene {
 }
 
 pub struct ParryScene {
-    pub qbvh: Qbvh<u32>,
+    pub tri_mesh: TriMesh,
     pub tris: Vec<SceneTri>,
     pub parry_tris: Vec<parry3d::shape::Triangle>,
 }
 
 impl ParryScene {
     pub fn new(tris: &[obvhs::triangle::Triangle], core_build_time: &mut Duration) -> Self {
-        let parry_tris = tris
-            .iter()
-            .map(|t| {
-                parry3d::shape::Triangle::new(
-                    Point::<f32, 3>::from(Into::<[f32; 3]>::into(t.v0)),
-                    Point::<f32, 3>::from(Into::<[f32; 3]>::into(t.v1)),
-                    Point::<f32, 3>::from(Into::<[f32; 3]>::into(t.v2)),
-                )
-            })
-            .collect::<Vec<_>>();
-        let indexed_aabbs = parry_tris
-            .iter()
-            .enumerate()
-            .map(|(i, tri)| (i as u32, tri.local_aabb()));
+        let mut parry_verts = Vec::with_capacity(tris.len());
+        let mut indices = Vec::with_capacity(tris.len());
+        for (tri_idx, t) in tris.iter().enumerate() {
+            let p0 = Point::<f32, 3>::from(Into::<[f32; 3]>::into(t.v0));
+            let p1 = Point::<f32, 3>::from(Into::<[f32; 3]>::into(t.v1));
+            let p2 = Point::<f32, 3>::from(Into::<[f32; 3]>::into(t.v2));
+            parry_verts.push(p0);
+            parry_verts.push(p1);
+            parry_verts.push(p2);
+            let index = tri_idx as u32 * 3;
+            indices.push([index + 0, index + 1, index + 2]);
+        }
         let tris = tris.iter().map(|t| SceneTri(t.clone())).collect::<Vec<_>>();
 
         let start_time = Instant::now();
-
-        let mut qbvh = Qbvh::<u32>::new();
-        qbvh.clear_and_rebuild(indexed_aabbs.clone(), 0.0);
-
+        let tri_mesh = TriMesh::new(parry_verts, indices).unwrap();
         *core_build_time += start_time.elapsed();
 
+        // Can this be avoided? It's not counted in core_build_time.
+        let parry_tris = tri_mesh.triangles().collect();
+
         ParryScene {
-            qbvh,
+            tri_mesh,
             tris,
             parry_tris,
         }
-    }
-}
-
-impl TypedSimdCompositeShape for &ParryScene {
-    type PartShape = parry3d::shape::Triangle;
-    type PartNormalConstraints = TrianglePseudoNormals;
-    type PartId = u32;
-
-    #[inline(always)]
-    fn map_typed_part_at(
-        &self,
-        i: u32,
-        mut f: impl FnMut(
-            Option<&Isometry<Real>>,
-            &Self::PartShape,
-            Option<&Self::PartNormalConstraints>,
-        ),
-    ) {
-        let tri = self.parry_tris[i as usize];
-        f(None, &tri, None)
-    }
-
-    #[inline(always)]
-    fn map_untyped_part_at(
-        &self,
-        i: u32,
-        mut f: impl FnMut(Option<&Isometry<Real>>, &dyn Shape, Option<&dyn NormalConstraints>),
-    ) {
-        let tri = self.parry_tris[i as usize];
-        f(None, &tri, None)
-    }
-
-    fn typed_qbvh(&self) -> &Qbvh<u32> {
-        &self.qbvh
     }
 }

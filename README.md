@@ -61,7 +61,7 @@ FLAGS:
 OPTIONS:
         --build <build>
             Specify BVH builder [default: ploc_cwbvh]  [possible values: ploc_cwbvh, ploc_bvh2, embree_cwbvh,
-            embree_bvh2_cwbvh, embree_managed, svenstaro_bvh2, parry_qbvh]
+            embree_bvh2_cwbvh, embree_managed, svenstaro_bvh2, parry_bvh]
     -i <input>
             Input file path, also supports multiple comma separated paths (use with benchmark & render-time). Use
             `demoscene` for included procedurally generated scene.
