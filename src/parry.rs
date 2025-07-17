@@ -48,21 +48,23 @@ pub struct ParryScene {
 }
 
 impl ParryScene {
-    pub fn new(tris: &[obvhs::triangle::Triangle], core_build_time: &mut Duration) -> Self {
-        let parry_tris = tris
-            .iter()
-            .map(|t| {
-                parry3d::shape::Triangle::new(
-                    Point::<f32, 3>::from(Into::<[f32; 3]>::into(t.v0)),
-                    Point::<f32, 3>::from(Into::<[f32; 3]>::into(t.v1)),
-                    Point::<f32, 3>::from(Into::<[f32; 3]>::into(t.v2)),
-                )
-            });
+    pub fn new(
+        tris: &[obvhs::triangle::Triangle],
+        strategy: BvhBuildStrategy,
+        core_build_time: &mut Duration,
+    ) -> Self {
+        let parry_tris = tris.iter().map(|t| {
+            parry3d::shape::Triangle::new(
+                Point::<f32, 3>::from(Into::<[f32; 3]>::into(t.v0)),
+                Point::<f32, 3>::from(Into::<[f32; 3]>::into(t.v1)),
+                Point::<f32, 3>::from(Into::<[f32; 3]>::into(t.v2)),
+            )
+        });
         let indexed_aabbs = parry_tris.map(|tri| tri.local_aabb()).enumerate();
         let tris = tris.iter().map(|t| SceneTri(t.clone())).collect::<Vec<_>>();
 
         let start_time = Instant::now();
-        let bvh = Bvh::from_iter(BvhBuildStrategy::Ploc, indexed_aabbs);
+        let bvh = Bvh::from_iter(strategy, indexed_aabbs);
         *core_build_time += start_time.elapsed();
 
         ParryScene { bvh, tris }

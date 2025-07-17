@@ -19,6 +19,7 @@ use obvhs::{
 };
 
 use parry::ParryScene;
+use parry3d::partitioning::BvhBuildStrategy;
 use svenstaro::build_svenstaro_scene;
 use traversable::SceneRtTri;
 #[cfg(feature = "embree")]
@@ -72,7 +73,7 @@ pub struct Options {
         help = "Stop rendering the current scene after n seconds."
     )]
     render_time: f32,
-    #[structopt(long, default_value = "ploc_cwbvh", help = "Specify BVH builder", possible_values  = &["ploc_cwbvh", "ploc_bvh2", "embree_cwbvh", "embree_bvh2_cwbvh", "embree_managed", "svenstaro_bvh2", "parry_bvh", "tinybvh_bvh2", "tinybvh_cwbvh", "tinybvh_cwbvh_hq"])]
+    #[structopt(long, default_value = "ploc_cwbvh", help = "Specify BVH builder", possible_values  = &["ploc_cwbvh", "ploc_bvh2", "embree_cwbvh", "embree_bvh2_cwbvh", "embree_managed", "svenstaro_bvh2", "parry_ploc", "parry_binned",  "tinybvh_bvh2", "tinybvh_cwbvh", "tinybvh_cwbvh_hq"])]
     build: String,
     #[structopt(
         long, 
@@ -288,7 +289,8 @@ fn render_from_options(
             let mut tlas_build_time = Duration::ZERO;
 
             let frame_time = if options.cpu {
-                match options.build.as_str() {
+                let build = options.build.as_str();
+                match build {
                     "embree_managed" => {
                         #[cfg(feature = "embree")]
                         {
@@ -362,11 +364,16 @@ fn render_from_options(
                         let svenstaro_scene = build_svenstaro_scene(&objects, &mut blas_build_time);
                         rt_cpu::rt_cpu::start(file_name, &options, &scene, &svenstaro_scene)
                     }
-                    "parry_bvh" => {
+                    "parry_ploc" | "parry_binned" => {
                         if options.tlas {
                             todo!("parry_bvh TLAS not implemented")
                         }
-                        let parry_scene = ParryScene::new(&objects[0], &mut blas_build_time);
+                        let build_strat = match build {
+                            "parry_ploc" => BvhBuildStrategy::Ploc,
+                            "parry_binned" => BvhBuildStrategy::Binned,
+                            _ => BvhBuildStrategy::Ploc
+                        };
+                        let parry_scene = ParryScene::new(&objects[0], build_strat, &mut blas_build_time);
                         rt_cpu::rt_cpu::start(file_name, &options, &scene, &parry_scene)
                     }
                     "tinybvh_bvh2" => {
