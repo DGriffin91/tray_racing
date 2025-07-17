@@ -14,7 +14,7 @@ embree4-sys = { version = "0.0.10" }
 obvhs = { git = "https://github.com/DGriffin91/obvhs", features = [
     "profile",
     "profile-with-tracing",
-] }
+], branch = "insertion_removal" }
 traversable = { path = "../traversable/" }
 profiling = "1.0"
 embree4-rs = { git = "https://github.com/DGriffin91/embree4-rs", branch = "obvhs" }

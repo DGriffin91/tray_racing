@@ -99,7 +99,7 @@ pub fn cwbvh_from_tris(
     };
 
     if options.verbose {
-        println!("{}", bvh.validate(triangles, false, false));
+        println!("{}", bvh.validate(triangles, false));
     }
     bvh
 }
