@@ -69,7 +69,7 @@ pub struct Options {
     benchmark: bool,
     #[structopt(
         long,
-        default_value = "0",
+        default_value = "1.0",
         help = "Stop rendering the current scene after n seconds."
     )]
     render_time: f32,
@@ -157,6 +157,12 @@ pub struct Options {
         help = "Multiplier for traversal cost calculation during collapse. A higher value will result in more primitives per leaf."
     )]
     collapse_traversal_cost: f32,
+    #[structopt(
+        long,
+        default_value = "3",
+        help = "How many times to run the full benchmark. Reported times will be averaged."
+    )]
+    passes: usize,
 }
 
 pub fn main() {
@@ -172,7 +178,28 @@ pub fn main() {
     }
 
     if !init_options.auto_tune {
-        render_from_options(&init_options, &mut event_loop, &mut None);
+        let mut passes_stats = vec![vec![]; init_options.passes];
+        let passes = init_options.passes as f32;
+        for stats in &mut passes_stats {
+            render_from_options(&init_options, &mut event_loop, &mut None,  stats);
+        }
+        let mut avg_stats = vec![];
+        for stat_n in 0..passes_stats[0].len() {
+            let mut avg_stat = Stats{
+                name: passes_stats[0][stat_n].name.clone(),
+                traversal_ms: 0.0,
+                blas_build_time_s: 0.0,
+                tlas_build_time_ms: 0.0,
+            };
+            for pass_n in 0..init_options.passes {
+                let stat = &passes_stats[pass_n][stat_n];
+                avg_stat.traversal_ms += stat.traversal_ms / passes;
+                avg_stat.blas_build_time_s += stat.blas_build_time_s / passes;
+                avg_stat.tlas_build_time_ms += stat.tlas_build_time_ms / passes;
+            }
+            avg_stats.push(avg_stat);
+        }
+        println!("{}", Table::new(avg_stats).with(Style::blank()));
     } else {
         tune(init_options, event_loop);
     }
@@ -182,6 +209,7 @@ fn render_from_options(
     options: &Options,
     event_loop: &mut winit::event_loop::EventLoop<()>,
     model_cache: &mut Option<HashMap<PathBuf, Vec<Vec<Triangle>>>>,
+    stats: &mut Vec<Stats>,
 ) -> (f32, f32, f32) {
     if options.benchmark && options.verbose && !options.cpu {
         println!("Note --benchmark runs additional dispatches to try to further normalize time stamp queries. Frame times seen by external programs will be much higher.")
@@ -204,7 +232,6 @@ fn render_from_options(
     };
 
     let inputs = options.input.split(",").collect::<Vec<_>>();
-    let mut stats = Vec::new();
     for input in &inputs {
         let file_name;
         let mut scene: Scene;
@@ -447,9 +474,6 @@ fn render_from_options(
         blas_build_time_s: avg_blas_build,
         tlas_build_time_ms: avg_tlas_build,
     });
-    if !options.auto_tune {
-        println!("{}", Table::new(stats).with(Style::blank()));
-    }
 
     (avg_traversal, avg_blas_build, avg_tlas_build)
 }
@@ -581,7 +605,7 @@ pub struct Scene {
     pub sun_direction: Vec3A,
 }
 
-#[derive(Tabled)]
+#[derive(Tabled, Clone)]
 struct Stats {
     name: String,
     traversal_ms: f32,

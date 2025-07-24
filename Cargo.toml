@@ -25,7 +25,7 @@ rayon = "1.10.0"
 obvhs = { git = "https://github.com/DGriffin91/obvhs", features = [
     "profile",
     "profile-with-tracing",
-], branch = "insertion_removal" }
+], branch = "insertion_removal" } #insertion_removal or api_compat_0.2.0
 tracing = "0.1.36"
 tracing-subscriber = "0.3.15"
 profiling = "1.0"

@@ -28,7 +28,12 @@ pub fn tune(init_options: Options, mut event_loop: winit::event_loop::EventLoop<
         * collapse_traversal_cost.len();
     {
         // Warmup. If skipped the first permutation or so may be faster because the clock speed has not normalized.
-        let (_, _, _) = render_from_options(&init_options, &mut event_loop, &mut model_cache);
+        let (_, _, _) = render_from_options(
+            &init_options,
+            &mut event_loop,
+            &mut model_cache,
+            &mut Vec::new(),
+        );
     }
     println!("Evaluating {} permutations", permutations);
     let test_start_time = Instant::now();
@@ -53,7 +58,12 @@ pub fn tune(init_options: Options, mut event_loop: winit::event_loop::EventLoop<
                                 options.collapse_traversal_cost = collapse_traversal_cost;
 
                                 let (avg_traversal_time, avg_blas_build_time, avg_tlas_build_time) =
-                                    render_from_options(&options, &mut event_loop, &mut model_cache);
+                                    render_from_options(
+                                        &options,
+                                        &mut event_loop,
+                                        &mut model_cache,
+                                        &mut Vec::new(),
+                                    );
                                 best_avg_traversal_time =
                                     best_avg_traversal_time.min(avg_traversal_time);
                                 best_avg_blas_build_time =
