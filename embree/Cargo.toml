@@ -10,11 +10,11 @@ glam = { version = "0.30", features = ["bytemuck"] }
 half = "2.3.1"
 bytemuck = "1.15"
 radsort = "0.1"
-embree4-sys = { version = "0.0.10" }
 obvhs = { git = "https://github.com/DGriffin91/obvhs", features = [
     "profile",
     "profile-with-tracing",
 ], branch = "insertion_removal" } #insertion_removal or api_compat_0.2.0
 traversable = { path = "../traversable/" }
 profiling = "1.0"
+embree4-sys = { version = "0.0.12" }
 embree4-rs = { git = "https://github.com/DGriffin91/embree4-rs", branch = "obvhs" }

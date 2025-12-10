@@ -8,32 +8,32 @@ edition = "2021"
 [dependencies]
 wgpu = { version = "25.0", features = ["spirv", "vulkan-portability"] }
 
-obj = { version = "0.10.2", features = ["genmesh"] }
+obj = { version = "0.10", features = ["genmesh"] }
 futures = { version = "0.3", default-features = false, features = [
     "std",
     "executor",
 ] }
 structopt = "0.3"
-bytemuck = "1.15"
-image = "0.24.7"
-winit = "0.29.10"
-tabled = "0.15.0"
+bytemuck = "1"
+image = "0.24"
+winit = "0.29"
+tabled = "0.15"
 glam = { version = "0.30", features = ["bytemuck", "serde"] }
 ron = "0.8"
 serde = { version = "1", features = ["derive"] }
-rayon = "1.10.0"
+rayon = "1.10"
 obvhs = { git = "https://github.com/DGriffin91/obvhs", features = [
     "profile",
     "profile-with-tracing",
 ], branch = "insertion_removal" } #insertion_removal or api_compat_0.2.0
-tracing = "0.1.36"
-tracing-subscriber = "0.3.15"
+tracing = "0.1"
+tracing-subscriber = "0.3"
 profiling = "1.0"
 chrono = "0.4"
 csv = "1.3"
-bvh = { version = "0.11", default-features = false }
-nalgebra = { version = "0.33" } # Only for svenstaro & parry3d bvh crates
-parry3d = { version = "0.22.0-beta.1", features = ["simd-stable"] }
+svenstaro = { package = "bvh", version = "0.12", default-features = false, features = ["std"] }
+nalgebra = { version = "0.34" } # Only for svenstaro & parry3d bvh crates
+parry3d = { version = "0.25", features = ["simd-stable"] }
 serde_json = "1.0"
 tinybvh-rs = { version = "0.1.0-beta.2", optional = true } # No support for cwbvh traversal
 #tinybvh-rs = { git = "https://github.com/DGriffin91/tinybvh-rs", rev = "enable_cwbvh", optional = true }
@@ -42,7 +42,7 @@ tinybvh-rs = { version = "0.1.0-beta.2", optional = true } # No support for cwbv
 # With `tinybvh @ c3972f9` I get back various prims but image looks like grey noise
 
 obvhs_embree = { path = "embree/", optional = true }
-embree4-sys = { version = "0.0.10", optional = true }
+embree4-sys = { version = "0.0.12", optional = true }
 embree4-rs = { git = "https://github.com/DGriffin91/embree4-rs", branch = "obvhs" }
 
 traversable = { path = "traversable/" }
@@ -73,4 +73,4 @@ embree = ["dep:obvhs_embree", "dep:embree4-sys"]
 tinybvh = ["dep:tinybvh-rs"]
 
 # Traversal is always parallel
-parallel_build = ["obvhs/parallel", "bvh/rayon"]
+parallel_build = ["obvhs/parallel", "svenstaro/rayon"]

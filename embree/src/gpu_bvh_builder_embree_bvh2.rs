@@ -3,14 +3,17 @@ use embree4_sys::{
 };
 use obvhs::{
     aabb::Aabb,
-    bvh2::{Bvh2, Bvh2Node},
+    bvh2::{node::Bvh2Node, Bvh2},
     cwbvh::{bvh2_to_cwbvh::Bvh2Converter, CwBvh},
     triangle::Triangle,
     BvhBuildParams,
 };
 use std::time::{Duration, Instant};
 
-use crate::bvh_embree::{self, UserData};
+use crate::{
+    bvh_embree::{self, UserData},
+    gpu_bvh_builder_embree::USE_EMBREE_PRESPLITS,
+};
 
 pub fn embree_build_bvh2_cwbvh_from_tris(
     triangles: &[Triangle],
@@ -112,10 +115,11 @@ pub fn embree_build_bvh2_cwbvh_from_tris(
         primitive_indices: converter.primitive_indices.clone(), //TODO shouldn't clone here
         total_aabb,
         exact_node_aabbs: None,
+        uses_spatial_splits: false,
     };
 
     #[cfg(debug_assertions)]
-    cwbvh.validate(triangles, false, false);
+    cwbvh.validate(triangles, false);
 
     cwbvh
 }
@@ -220,6 +224,7 @@ pub fn embree_build_bvh2_from_aabbs(
         primitive_indices: converter.primitive_indices,
         total_aabb,
         exact_node_aabbs: None,
+        uses_spatial_splits: USE_EMBREE_PRESPLITS,
     }
 }
 
@@ -232,11 +237,7 @@ fn convert_to_bvh2(
 ) {
     let child_base_idx = bvh2.nodes.len();
 
-    bvh2.nodes[output_idx] = Bvh2Node {
-        aabb: *parent_aabb,
-        prim_count: 0,
-        first_index: child_base_idx as u32,
-    };
+    bvh2.nodes[output_idx] = Bvh2Node::new(*parent_aabb, 0, child_base_idx as u32);
 
     #[allow(unused_mut)]
     let mut test_aabb = Aabb::empty();
@@ -254,11 +255,11 @@ fn convert_to_bvh2(
                 bvh2.nodes.push(Bvh2Node::default());
             }
             bvh_embree::Node::Leaf(leaf) => {
-                bvh2.nodes.push(Bvh2Node {
-                    aabb: *aabb,
-                    prim_count: leaf.prims.len() as u32,
-                    first_index: bvh2.primitive_indices.len() as u32,
-                });
+                bvh2.nodes.push(Bvh2Node::new(
+                    *aabb,
+                    leaf.prims.len() as u32,
+                    bvh2.primitive_indices.len() as u32,
+                ));
                 for index in leaf.prims {
                     bvh2.primitive_indices.push(input_indices[*index as usize]);
                 }

@@ -113,10 +113,11 @@ pub fn embree_build_cwbvh_from_tris(
         primitive_indices: converter.indices,
         total_aabb,
         exact_node_aabbs: None,
+        uses_spatial_splits: USE_EMBREE_PRESPLITS,
     };
 
     #[cfg(debug_assertions)]
-    gpu_bvh.validate(triangles, USE_EMBREE_PRESPLITS, false);
+    gpu_bvh.validate(triangles, false);
 
     gpu_bvh
 }
@@ -207,5 +208,6 @@ pub fn embree_build_cwbvh_from_aabbs(
         primitive_indices: converter.indices,
         total_aabb,
         exact_node_aabbs: None,
+        uses_spatial_splits: USE_EMBREE_PRESPLITS,
     }
 }

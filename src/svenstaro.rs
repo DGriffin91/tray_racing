@@ -1,13 +1,12 @@
 use std::time::Duration;
 
-use bvh::bounding_hierarchy::BHShape;
-
-use bvh::bvh::Bvh;
 use glam::Mat4;
 use nalgebra::{Point, SVector};
 use obvhs::ray::{Ray, RayHit};
 use obvhs::rt_triangle::RtTriangle;
 use obvhs::triangle::Triangle;
+use svenstaro::bounding_hierarchy::BHShape;
+use svenstaro::bvh::Bvh;
 use traversable::{SceneRtTri, Traversable};
 
 #[cfg(feature = "parallel_build")]
@@ -20,9 +19,9 @@ pub fn build_svenstaro_scene(
     let mut shapes = svenstaro_bbox_shapes(&*objects[0]);
     let start_time = std::time::Instant::now();
     #[cfg(feature = "parallel_build")]
-    let bvh = bvh::bvh::Bvh::build_par(&mut shapes);
+    let bvh = svenstaro::bvh::Bvh::build_par(&mut shapes);
     #[cfg(not(feature = "parallel_build"))]
-    let bvh = bvh::bvh::Bvh::build(&mut shapes);
+    let bvh = svenstaro::bvh::Bvh::build(&mut shapes);
     *blas_build_time += start_time.elapsed();
     SvenstaroScene { shapes, bvh }
 }
@@ -33,10 +32,10 @@ pub struct TriShape {
     node_index: usize,
 }
 
-impl bvh::aabb::Bounded<f32, 3> for TriShape {
-    fn aabb(&self) -> bvh::aabb::Aabb<f32, 3> {
+impl svenstaro::aabb::Bounded<f32, 3> for TriShape {
+    fn aabb(&self) -> svenstaro::aabb::Aabb<f32, 3> {
         let aabb = self.tri.0.aabb();
-        bvh::aabb::Aabb::with_bounds(
+        svenstaro::aabb::Aabb::with_bounds(
             Point::<f32, 3>::from(Into::<[f32; 3]>::into(aabb.min)),
             Point::<f32, 3>::from(Into::<[f32; 3]>::into(aabb.max)),
         )
@@ -76,7 +75,7 @@ impl Traversable for SvenstaroScene {
 
     #[inline(always)]
     fn traverse(&self, ray: Ray) -> RayHit {
-        let ray_s = bvh::ray::Ray::new(
+        let ray_s = svenstaro::ray::Ray::new(
             Point::<f32, 3>::from(Into::<[f32; 3]>::into(ray.origin)),
             SVector::<f32, 3>::from(Into::<[f32; 3]>::into(ray.direction)),
         );

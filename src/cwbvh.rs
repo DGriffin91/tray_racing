@@ -82,10 +82,11 @@ pub fn cwbvh_from_tris(
                     .collect(),
                 total_aabb: convert_tinybvh_cwbvh(&tinybvh_scene.cwbvh.nodes()[0]).aabb(),
                 exact_node_aabbs: None,
+                uses_spatial_splits: options.build.contains("hq"),
             };
             let _result = std::panic::catch_unwind(|| {
                 // catch_unwind here because TRAVERSAL_STACK_SIZE > 32 on Bistro and San Miguel
-                cwbvh.validate(&triangles, options.build.contains("hq"), false);
+                cwbvh.validate(&triangles, false);
             });
             cwbvh
         }
