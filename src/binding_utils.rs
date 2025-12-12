@@ -181,6 +181,7 @@ pub fn load_color_attachment(view: &TextureView) -> Option<RenderPassColorAttach
             load: LoadOp::Load,
             store: StoreOp::Store,
         },
+        depth_slice: None,
     })
 }
 
@@ -192,6 +193,7 @@ pub fn clear_color_attachment(view: &TextureView) -> Option<RenderPassColorAttac
             load: LoadOp::Clear(Default::default()),
             store: StoreOp::Store,
         },
+        depth_slice: None,
     })
 }
 

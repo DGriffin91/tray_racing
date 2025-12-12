@@ -101,6 +101,7 @@ async fn start_internal(
             },
             ..Default::default()
         },
+        ..Default::default()
     });
 
     let surface = instance.create_surface(&window).unwrap();
@@ -117,7 +118,7 @@ async fn start_internal(
         | Features::SPIRV_SHADER_PASSTHROUGH
         | Features::PUSH_CONSTANTS;
 
-    let mut limits = Limits::default();
+    let mut limits = Limits::default().using_minimum_supported_acceleration_structure_values();
     limits.max_storage_buffer_binding_size = adapter.limits().max_storage_buffer_binding_size;
     limits.max_buffer_size = adapter.limits().max_buffer_size;
     limits.max_push_constant_size = 32;
@@ -243,7 +244,7 @@ async fn start_internal(
         },
     );
 
-    let tlas = device.create_tlas(&CreateTlasDescriptor {
+    let mut tlas = device.create_tlas(&CreateTlasDescriptor {
         label: None,
         flags: AccelerationStructureFlags::PREFER_FAST_TRACE,
         update_mode: AccelerationStructureUpdateMode::Build,
@@ -292,8 +293,7 @@ async fn start_internal(
         ],
     });
 
-    let mut tlas_package = TlasPackage::new(tlas);
-    *tlas_package.get_mut_single(0).unwrap() = Some(TlasInstance::new(
+    *tlas.get_mut_single(0).unwrap() = Some(TlasInstance::new(
         &blas,
         AccelerationStructureInstance::affine_to_rows(&Affine3A::from_rotation_translation(
             Quat::default(),
@@ -319,7 +319,7 @@ async fn start_internal(
                 transform_buffer_offset: None,
             }]),
         }),
-        std::iter::once(&tlas_package),
+        std::iter::once(&tlas),
     );
     queue.submit(Some(encoder.finish()));
 

@@ -89,6 +89,7 @@ async fn start_internal(
             },
             ..Default::default()
         },
+        ..Default::default()
     });
 
     let surface = instance.create_surface(&window).unwrap();
