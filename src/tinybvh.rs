@@ -62,12 +62,11 @@ impl TinyBvhScene<'_> {
 
         let tris = tris.iter().map(|t| SceneTri(t.clone())).collect::<Vec<_>>();
 
-        let start_time = Instant::now();
-
         // TODO don't leak
         let leaked_tris: &'static [[f32; 4]] = Box::leak(tinybvh_tris.clone().into_boxed_slice());
-        let bvh = tinybvh_rs::wald::BVH::new(leaked_tris);
 
+        let start_time = Instant::now();
+        let bvh = tinybvh_rs::wald::BVH::new(leaked_tris);
         *core_build_time += start_time.elapsed();
 
         TinyBvhScene { bvh, tris }
@@ -135,17 +134,16 @@ impl TinyBvhCwbvhScene<'_> {
 
         let tris = tris.iter().map(|t| SceneTri(t.clone())).collect::<Vec<_>>();
 
-        let start_time = Instant::now();
-
         // TODO don't leak
         let leaked_tris: &'static [[f32; 4]] = Box::leak(tinybvh_tris.clone().into_boxed_slice());
+
+        let start_time = Instant::now();
         let bvh = if hq {
             // Note: uses splits
             tinybvh_rs::cwbvh::BVH::new_hq(leaked_tris)
         } else {
             tinybvh_rs::cwbvh::BVH::new(leaked_tris)
         };
-
         *core_build_time += start_time.elapsed();
 
         TinyBvhCwbvhScene { cwbvh: bvh, tris }
