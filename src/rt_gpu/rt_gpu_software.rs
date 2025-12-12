@@ -12,7 +12,6 @@ use glam::*;
 use std::{mem, num::NonZeroU64, path::PathBuf, time::Instant};
 use wgpu::{
     util::{initialize_adapter_from_env_or_default, make_spirv_raw},
-    wgt::CreateShaderModuleDescriptorPassthrough,
     *,
 };
 use winit::{
@@ -48,9 +47,11 @@ pub fn start(
         event_loop,
         options,
         scene,
-        ShaderModuleDescriptorSpirV {
+        ShaderModuleDescriptorPassthrough {
+            entry_point: "main".into(),
             label: Some(&dst_string),
-            source: make_spirv_raw(&slang_spv),
+            spirv: Some(make_spirv_raw(&slang_spv)),
+            ..Default::default()
         },
         bvh_bytes,
         instance_bytes,
@@ -63,7 +64,7 @@ async fn start_internal(
     event_loop: &mut EventLoop<()>,
     options: &Options,
     scene: &Scene,
-    shader_module: ShaderModuleDescriptorSpirV<'_>,
+    shader_module: ShaderModuleDescriptorPassthrough<'_>,
     bvh_bytes: &[u8],
     instance_bytes: &[u8],
     tri_bytes: &[u8],
@@ -86,6 +87,7 @@ async fn start_internal(
         backend_options: BackendOptions {
             dx12: Dx12BackendOptions {
                 shader_compiler: Dx12Compiler::default_dynamic_dxc(),
+                ..Default::default()
             },
             ..Default::default()
         },
@@ -101,7 +103,7 @@ async fn start_internal(
     let required_features = Features::TIMESTAMP_QUERY
         | Features::TIMESTAMP_QUERY_INSIDE_PASSES
         | Features::TEXTURE_ADAPTER_SPECIFIC_FORMAT_FEATURES
-        | Features::SPIRV_SHADER_PASSTHROUGH
+        | Features::EXPERIMENTAL_PASSTHROUGH_SHADERS
         | Features::PUSH_CONSTANTS;
     // before SPIRV_SHADER_PASSTHROUGH, was getting:
     // UnsupportedInstruction(Function, AtomicIAdd)
@@ -119,6 +121,7 @@ async fn start_internal(
             required_limits: limits,
             memory_hints: Default::default(),
             trace: Trace::Off,
+            experimental_features: unsafe { ExperimentalFeatures::enabled() },
         })
         .await
         .expect("Failed to create device");
@@ -135,11 +138,7 @@ async fn start_internal(
     drop(instance);
     drop(adapter);
 
-    let module = unsafe {
-        device.create_shader_module_passthrough(CreateShaderModuleDescriptorPassthrough::SpirV(
-            shader_module,
-        ))
-    };
+    let module = unsafe { device.create_shader_module_passthrough(shader_module) };
     let output_texture = device.create_texture(&TextureDescriptor {
         label: Some("output_texture"),
         size: Extent3d {
