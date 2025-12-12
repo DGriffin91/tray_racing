@@ -6,11 +6,10 @@ use obvhs::ray::{Ray, RayHit};
 use obvhs::rt_triangle::RtTriangle;
 use obvhs::triangle::Triangle;
 use svenstaro::bounding_hierarchy::BHShape;
+#[cfg(feature = "parallel_build")]
+use svenstaro::bounding_hierarchy::BoundingHierarchy;
 use svenstaro::bvh::Bvh;
 use traversable::{SceneRtTri, Traversable};
-
-#[cfg(feature = "parallel_build")]
-use bvh::bounding_hierarchy::BoundingHierarchy;
 
 pub fn build_svenstaro_scene(
     objects: &Vec<Vec<Triangle>>,
