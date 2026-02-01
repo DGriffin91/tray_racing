@@ -20,7 +20,7 @@ All times are in (milli)seconds. Less is better.
 ![gpu_traversal_bench](results/gpu_traversal_bench.PNG)
 ![cpu_single_threaded_building_bench](results/cpu_single_threaded_building_bench.PNG)
 ![cpu_multi_threaded_building_bench](results/cpu_multi_threaded_building_bench.PNG)
-*Last updated on 6/30/24*
+*Last updated on 2/1/26*
 
 Test Scenes:
 
@@ -31,6 +31,7 @@ Test Scenes:
 - [San Miguel](https://casual-effects.com/data/) `5,075,977 tris` 
 - [Sponza](https://www.intel.com/content/www/us/en/developer/topic-technology/graphics-research/samples.html) `3,746,636 tris` 
 - [Courtyard](https://www.unrealengine.com/marketplace/en-US/product/middle-eastern-courtyard) `612,205 tris` 
+- [Caldera Hotel 01](https://github.com/Activision/caldera) `19,261,109 tris`
 
 For GPU benchmarking, please lock GPU/VRAM clocks: [NVIDIA Instructions.](https://developer.nvidia.com/blog/advanced-api-performance-setstablepowerstate/)
 GPU benchmarking requires [dxc](https://github.com/microsoft/DirectXShaderCompiler) to be in `path`.
