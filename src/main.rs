@@ -6,6 +6,7 @@ cargo run --release -- --benchmark --preset very_fast_build --render-time 5.0 -i
 
 use std::{
     collections::HashMap,
+    f32,
     fs::File,
     io::BufReader,
     path::{Path, PathBuf},
@@ -313,13 +314,15 @@ fn render_from_options(
             }
         }
 
-        if options.hardware {
-            rt_gpu_hardware::start(event_loop, &options, &scene, &objects, options.render_time);
-        } else {
-            let mut blas_build_time = Duration::ZERO;
-            let mut tlas_build_time = Duration::ZERO;
+        let mut frame_time;
+        let mut blas_build_time = Duration::ZERO;
+        let mut tlas_build_time = Duration::ZERO;
 
-            let frame_time = if options.cpu {
+        if options.hardware {
+            frame_time =
+                rt_gpu_hardware::start(event_loop, &options, &scene, &objects, options.render_time);
+        } else {
+            frame_time = if options.cpu {
                 let build = options.build.as_str();
                 match build {
                     "embree_managed" => {
@@ -465,14 +468,13 @@ fn render_from_options(
                     embree_device.as_ref(),
                 )
             };
-
-            stats.push(Stats {
-                name: file_name.to_string(),
-                traversal_ms: frame_time,
-                blas_build_time_s: blas_build_time.as_secs_f32(),
-                tlas_build_time_ms: (tlas_build_time).as_secs_f32() * 1000.0, // Convert to ms
-            });
         }
+        stats.push(Stats {
+            name: file_name.to_string(),
+            traversal_ms: frame_time,
+            blas_build_time_s: blas_build_time.as_secs_f32(),
+            tlas_build_time_ms: (tlas_build_time).as_secs_f32() * 1000.0, // Convert to ms
+        });
     }
     let len = stats.len() as f32;
     let avg_traversal = stats.iter().map(|s| s.traversal_ms).sum::<f32>() / len;

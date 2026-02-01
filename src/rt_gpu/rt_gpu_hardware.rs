@@ -28,7 +28,7 @@ pub fn start(
     scene: &Scene,
     triangles: &[Vec<Triangle>],
     benchmark_seconds: f32,
-) {
+) -> f32 {
     let src_dir = PathBuf::from(std::env::current_dir().unwrap()).join("src/rt_gpu");
     let src_path = src_dir.join("rt_gpu_hardware.hlsl");
     let dst_path = src_dir.with_extension("spv");
@@ -38,7 +38,7 @@ pub fn start(
 
     let slang_spv = load_shader_module(&dst_path);
 
-    futures::executor::block_on(start_internal(
+    let avg_ms = futures::executor::block_on(start_internal(
         event_loop,
         triangles,
         options,
@@ -49,6 +49,7 @@ pub fn start(
         },
         benchmark_seconds,
     ));
+    avg_ms
 }
 
 async fn start_internal(
@@ -58,7 +59,7 @@ async fn start_internal(
     scene: &Scene,
     shader_module: ShaderModuleDescriptorSpirV<'_>,
     benchmark_seconds: f32,
-) {
+) -> f32 {
     let mut vertex_data = Vec::new();
 
     if options.tlas {
@@ -324,6 +325,7 @@ async fn start_internal(
     queue.submit(Some(encoder.finish()));
 
     let mut avg_ms = 0.0;
+    let mut running_avg_ms = 0.0;
     let mut frame_count = 0;
     let mut last_timestamp_print = Instant::now();
     let start_time = Instant::now();
@@ -412,14 +414,15 @@ async fn start_internal(
 
                             if options.benchmark {
                                 let time_ms = timestamp.get_ms(&device);
+                                avg_ms += time_ms;
                                 if frame_count < 3 {
-                                    avg_ms = time_ms;
+                                    running_avg_ms = time_ms;
                                 } else {
-                                    avg_ms = avg_ms * 0.99 + time_ms * 0.01;
+                                    running_avg_ms = running_avg_ms * 0.99 + time_ms * 0.01;
                                 }
                                 if last_timestamp_print.elapsed().as_secs_f32() > 2.0 {
                                     last_timestamp_print = Instant::now();
-                                    println!("Timestamp:\t{:.2}ms", avg_ms);
+                                    println!("Timestamp:\t{:.2}ms", running_avg_ms);
                                 }
                                 if benchmark_seconds != 0.0 {
                                     if start_time.elapsed().as_secs_f32() > benchmark_seconds {
@@ -444,4 +447,5 @@ async fn start_internal(
             })
             .unwrap();
     }
+    avg_ms / frame_count as f32
 }
