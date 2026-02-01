@@ -1,5 +1,4 @@
 use glam::Mat4;
-use nalgebra::{Point, SVector};
 use obvhs::ray::{Ray, RayHit};
 use parry3d::partitioning::{Bvh, BvhBuildStrategy};
 use std::time::{Duration, Instant};
@@ -11,8 +10,8 @@ impl Traversable for ParryScene {
     #[inline(always)]
     fn traverse(&self, ray: Ray) -> RayHit {
         let mut ray_s = parry3d::query::Ray::new(
-            Point::<f32, 3>::from(Into::<[f32; 3]>::into(ray.origin)),
-            SVector::<f32, 3>::from(Into::<[f32; 3]>::into(ray.direction)),
+            parry3d::math::Vec3::from(Into::<[f32; 3]>::into(ray.origin)),
+            parry3d::math::Vec3::from(Into::<[f32; 3]>::into(ray.direction)),
         );
         ray_s.origin = ray_s.point_at(ray.tmin);
 
@@ -55,9 +54,9 @@ impl ParryScene {
     ) -> Self {
         let parry_tris = tris.iter().map(|t| {
             parry3d::shape::Triangle::new(
-                Point::<f32, 3>::from(Into::<[f32; 3]>::into(t.v0)),
-                Point::<f32, 3>::from(Into::<[f32; 3]>::into(t.v1)),
-                Point::<f32, 3>::from(Into::<[f32; 3]>::into(t.v2)),
+                parry3d::math::Vec3::from(Into::<[f32; 3]>::into(t.v0)),
+                parry3d::math::Vec3::from(Into::<[f32; 3]>::into(t.v1)),
+                parry3d::math::Vec3::from(Into::<[f32; 3]>::into(t.v2)),
             )
         });
         let indexed_aabbs = parry_tris.map(|tri| tri.local_aabb()).enumerate();
