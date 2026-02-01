@@ -5,7 +5,11 @@ cargo run --release -- --benchmark --preset very_fast_build --render-time 5.0 -i
 */
 
 use std::{
-    collections::HashMap, fs::File, io::BufReader, path::{Path, PathBuf}, time::Duration
+    collections::HashMap,
+    fs::File,
+    io::BufReader,
+    path::{Path, PathBuf},
+    time::Duration,
 };
 
 use auto_tune::tune;
@@ -28,19 +32,22 @@ use traversable::SceneTri;
 mod auto_tune;
 pub mod binding_utils;
 
-#[cfg(feature = "tinybvh")]
-mod tinybvh;
 mod cwbvh;
 mod parry;
 mod rt_cpu;
 mod rt_gpu;
 mod svenstaro;
 mod timestamp;
+#[cfg(feature = "tinybvh")]
+mod tinybvh;
 mod verbose;
 
 use obj::Obj;
 #[cfg(feature = "embree")]
-use obvhs_embree::{embree_managed::{EmbreeSceneAndObjects, embree_attach_geometry}, new_embree_device};
+use obvhs_embree::{
+    embree_managed::{embree_attach_geometry, EmbreeSceneAndObjects},
+    new_embree_device,
+};
 use ron::de::from_reader;
 use rt_cpu::Bvh2Scene;
 use rt_gpu::cwbvh_gpu_runner;
@@ -50,7 +57,7 @@ use serde::{Deserialize, Serialize};
 use structopt::StructOpt;
 use tabled::{settings::Style, Table, Tabled};
 
-use crate::{ verbose::setup_subscriber};
+use crate::verbose::setup_subscriber;
 
 use crate::rt_cpu::cwbvh_cpu_runner;
 
@@ -76,9 +83,9 @@ pub struct Options {
     #[structopt(long, default_value = "ploc_cwbvh", help = "Specify BVH builder", possible_values  = &["ploc_cwbvh", "ploc_bvh2", "embree_cwbvh", "embree_bvh2_cwbvh", "embree_managed", "svenstaro_bvh2", "parry_ploc", "parry_binned",  "tinybvh_bvh2", "tinybvh_cwbvh", "tinybvh_cwbvh_hq"])]
     build: String,
     #[structopt(
-        long, 
-        default_value = "14", 
-        possible_values  = &["1", "2", "6", "14", "24", "32"], 
+        long,
+        default_value = "14",
+        possible_values  = &["1", "2", "6", "14", "24", "32"],
         help = "In ploc, the number of nodes before and after the current one that are evaluated for pairing. 1 has a fast path in building and still results in decent quality BVHs esp. when paired with a bit of reinsertion.")
     ]
     search_distance: u32,
@@ -94,10 +101,7 @@ pub struct Options {
         help = "Maximum primitives per leaf. For CWBVH the limit is 3"
     )]
     max_prims_per_leaf: u32,
-    #[structopt(
-        long,
-        help = "Use Vulkan hardware RT"
-    )]
+    #[structopt(long, help = "Use Vulkan hardware RT")]
     hardware: bool,
     #[structopt(long, help = "Render on the CPU")]
     cpu: bool,
@@ -118,9 +122,9 @@ pub struct Options {
     )]
     post_collapse_reinsertion_batch_ratio_multiplier: f32,
     #[structopt(
-        long, 
-        default_value = "", 
-        possible_values  = &["", "fastest_build", "very_fast_build", "fast_build", "medium_build", "slow_build", "very_slow_build"], 
+        long,
+        default_value = "",
+        possible_values  = &["", "fastest_build", "very_fast_build", "fast_build", "medium_build", "slow_build", "very_slow_build"],
         help = "Overrides BVH build options.")
     ]
     preset: String,
@@ -181,11 +185,11 @@ pub fn main() {
         let mut passes_stats = vec![vec![]; init_options.passes];
         let passes = init_options.passes as f32;
         for stats in &mut passes_stats {
-            render_from_options(&init_options, &mut event_loop, &mut None,  stats);
+            render_from_options(&init_options, &mut event_loop, &mut None, stats);
         }
         let mut avg_stats = vec![];
         for stat_n in 0..passes_stats[0].len() {
-            let mut avg_stat = Stats{
+            let mut avg_stat = Stats {
                 name: passes_stats[0][stat_n].name.clone(),
                 traversal_ms: 0.0,
                 blas_build_time_s: 0.0,
@@ -398,9 +402,10 @@ fn render_from_options(
                         let build_strat = match build {
                             "parry_ploc" => BvhBuildStrategy::Ploc,
                             "parry_binned" => BvhBuildStrategy::Binned,
-                            _ => BvhBuildStrategy::Ploc
+                            _ => BvhBuildStrategy::Ploc,
                         };
-                        let parry_scene = ParryScene::new(&objects[0], build_strat, &mut blas_build_time);
+                        let parry_scene =
+                            ParryScene::new(&objects[0], build_strat, &mut blas_build_time);
                         rt_cpu::rt_cpu::start(file_name, &options, &scene, &parry_scene)
                     }
                     "tinybvh_bvh2" => {
@@ -409,7 +414,8 @@ fn render_from_options(
                             if options.tlas {
                                 todo!("tinybvh_bvh2 TLAS not implemented")
                             }
-                            let tinybvh_scene = tinybvh::TinyBvhScene::new(&objects[0], &mut blas_build_time);
+                            let tinybvh_scene =
+                                tinybvh::TinyBvhScene::new(&objects[0], &mut blas_build_time);
                             rt_cpu::rt_cpu::start(file_name, &options, &scene, &tinybvh_scene)
                         }
                         #[cfg(not(feature = "tinybvh"))]
@@ -422,7 +428,11 @@ fn render_from_options(
                                 todo!("tinybvh_cwbvh TLAS not implemented")
                             }
                             println!("tinybvh_cwbvh traversal is not currently working");
-                            let tinybvh_scene = tinybvh::TinyBvhCwbvhScene::new(&objects[0], &mut blas_build_time, false);
+                            let tinybvh_scene = tinybvh::TinyBvhCwbvhScene::new(
+                                &objects[0],
+                                &mut blas_build_time,
+                                false,
+                            );
                             rt_cpu::rt_cpu::start(file_name, &options, &scene, &tinybvh_scene)
                         }
                         #[cfg(not(feature = "tinybvh"))]
@@ -480,7 +490,13 @@ fn render_from_options(
 
 #[profiling::function]
 fn load_meshs(model_path: &Path) -> Vec<Vec<Triangle>> {
-    if model_path.extension().unwrap().to_str().unwrap().contains("json") {
+    if model_path
+        .extension()
+        .unwrap()
+        .to_str()
+        .unwrap()
+        .contains("json")
+    {
         // Basic format for json scene with just raw tris:
         // `[{"v0":[-72.0,3.2,57.3], "v1":[-79.4,3.2,56.7], "v2":[-79.4,11.9,56.7]},` etc...
         #[derive(Serialize, Deserialize, Debug)]
@@ -498,7 +514,14 @@ fn load_meshs(model_path: &Path) -> Vec<Vec<Triangle>> {
             Ok(j) => j,
             Err(e) => panic!("Error while loading json file {:?}: {}", model_path, e),
         };
-        let tris = json_triangles.iter().map(|t| Triangle { v0: t.v0.into(), v1: t.v1.into(), v2: t.v2.into() }).collect::<Vec<_>>();
+        let tris = json_triangles
+            .iter()
+            .map(|t| Triangle {
+                v0: t.v0.into(),
+                v1: t.v1.into(),
+                v2: t.v2.into(),
+            })
+            .collect::<Vec<_>>();
         vec![tris]
     } else {
         let objf = match Obj::load(model_path) {
@@ -554,7 +577,8 @@ fn build_params_from_options(options: &Options) -> BvhBuildParams {
                 _ => panic!("Unsupported sort precision"),
             },
             max_prims_per_leaf: options.max_prims_per_leaf,
-            post_collapse_reinsertion_batch_ratio_multiplier: options.post_collapse_reinsertion_batch_ratio_multiplier,
+            post_collapse_reinsertion_batch_ratio_multiplier: options
+                .post_collapse_reinsertion_batch_ratio_multiplier,
             collapse_traversal_cost: options.collapse_traversal_cost,
         },
     }

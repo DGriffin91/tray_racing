@@ -8,4 +8,4 @@ obvhs = { git = "https://github.com/DGriffin91/obvhs", features = [
     "profile",
     "profile-with-tracing",
 ], branch = "insertion_removal" } #insertion_removal or api_compat_0.2.0
-glam = { version = "0.30", features = ["bytemuck"] }
+glam = { version = "0.31", features = ["bytemuck"] }

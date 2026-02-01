@@ -18,14 +18,16 @@ bytemuck = "1"
 image = "0.24"
 winit = "0.29"
 tabled = "0.15"
-glam = { version = "0.30", features = ["bytemuck", "serde"] }
+glam = { version = "0.31", features = ["bytemuck", "serde"] }
 ron = "0.8"
 serde = { version = "1", features = ["derive"] }
 rayon = "1.10"
+
 obvhs = { git = "https://github.com/DGriffin91/obvhs", features = [
     "profile",
     "profile-with-tracing",
-], branch = "insertion_removal" } #insertion_removal or api_compat_0.2.0
+], branch = "insertion_removal" } # insertion_removal or api_compat_0.2.0
+
 tracing = "0.1"
 tracing-subscriber = "0.3"
 profiling = "1.0"
