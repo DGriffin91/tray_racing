@@ -314,7 +314,7 @@ fn render_from_options(
             }
         }
 
-        let mut frame_time;
+        let frame_time;
         let mut blas_build_time = Duration::ZERO;
         let mut tlas_build_time = Duration::ZERO;
 
