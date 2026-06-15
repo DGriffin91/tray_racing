@@ -70,8 +70,7 @@ opt-level = 3
 
 
 [features]
-default = ["tinybvh", "embree"]
-# default = ["tinybvh"]
+#default = ["tinybvh", "embree"]
 embree = ["dep:obvhs_embree", "dep:embree4-sys"]
 tinybvh = ["dep:tinybvh-rs"]
 
