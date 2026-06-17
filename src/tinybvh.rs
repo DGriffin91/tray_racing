@@ -39,7 +39,7 @@ impl Traversable for TinyBvhScene<'_> {
 }
 
 pub struct TinyBvhScene<'a> {
-    pub bvh: tinybvh_rs::wald::BVH<'a>,
+    pub bvh: tinybvh_rs::bvh::BVH<'a>,
     pub tris: Vec<SceneTri>,
 }
 
@@ -66,14 +66,14 @@ impl TinyBvhScene<'_> {
         let leaked_tris: &'static [[f32; 4]] = Box::leak(tinybvh_tris.clone().into_boxed_slice());
 
         let start_time = Instant::now();
-        let bvh = tinybvh_rs::wald::BVH::new(leaked_tris);
+        let bvh = tinybvh_rs::bvh::BVH::new((*leaked_tris).into()).unwrap();
         *core_build_time += start_time.elapsed();
 
         TinyBvhScene { bvh, tris }
     }
 }
 
-impl Traversable for TinyBvhCwbvhScene<'_> {
+impl Traversable for TinyBvhCwbvhScene {
     type Primitive = SceneTri;
 
     #[inline(always)]
@@ -105,16 +105,16 @@ impl Traversable for TinyBvhCwbvhScene<'_> {
     }
 }
 
-pub struct TinyBvhCwbvhScene<'a> {
+pub struct TinyBvhCwbvhScene {
     #[allow(dead_code)]
-    pub cwbvh: tinybvh_rs::cwbvh::BVH<'a>,
+    pub cwbvh: tinybvh_rs::cwbvh::BVH,
     pub tris: Vec<SceneTri>,
 }
 
-unsafe impl<'a> Send for TinyBvhCwbvhScene<'a> {}
-unsafe impl<'a> Sync for TinyBvhCwbvhScene<'a> {}
+unsafe impl Send for TinyBvhCwbvhScene {}
+unsafe impl Sync for TinyBvhCwbvhScene {}
 
-impl TinyBvhCwbvhScene<'_> {
+impl TinyBvhCwbvhScene {
     pub fn new(
         tris: &[obvhs::triangle::Triangle],
         core_build_time: &mut Duration,
@@ -134,19 +134,20 @@ impl TinyBvhCwbvhScene<'_> {
 
         let tris = tris.iter().map(|t| SceneTri(t.clone())).collect::<Vec<_>>();
 
-        // TODO don't leak
-        let leaked_tris: &'static [[f32; 4]] = Box::leak(tinybvh_tris.clone().into_boxed_slice());
-
         let start_time = Instant::now();
-        let bvh = if hq {
+        let mut bvh = if hq {
             // Note: uses splits
-            tinybvh_rs::cwbvh::BVH::new_hq(leaked_tris)
+            tinybvh_rs::bvh::BVH::new_hq(tinybvh_tris.as_slice().into()).unwrap()
         } else {
-            tinybvh_rs::cwbvh::BVH::new(leaked_tris)
+            tinybvh_rs::bvh::BVH::new(tinybvh_tris.as_slice().into()).unwrap()
         };
+        bvh.split_leaves(3);
+
+        let mbvh = tinybvh_rs::mbvh::BVH::new(&bvh);
+        let cwbvh = tinybvh_rs::cwbvh::BVH::new(&mbvh).unwrap();
         *core_build_time += start_time.elapsed();
 
-        TinyBvhCwbvhScene { cwbvh: bvh, tris }
+        TinyBvhCwbvhScene { cwbvh, tris }
     }
 }
 
