@@ -18,7 +18,7 @@ bytemuck = "1"
 image = "0.24"
 winit = "0.29"
 tabled = "0.15"
-glam = { version = "0.32", features = ["bytemuck", "serde"] }
+glam = { version = "0.33", features = ["bytemuck", "serde"] }
 ron = "0.8"
 serde = { version = "1", features = ["derive"] }
 rayon = "1.10"
@@ -44,8 +44,10 @@ tinybvh-rs = { version = "0.1.0-beta.3", optional = true } # No support for cwbv
 # With `tinybvh @ c3972f9` I get back various prims but image looks like grey noise
 
 obvhs_embree = { path = "embree/", optional = true }
+# it appears that bindgen is not generating correct bindings for RTCIntersectFunctionNArguments (or something)
+# tried using embree4-rs 0.0.16 with the same issue
 embree4-sys = { version = "0.0.12", optional = true }
-embree4-rs = { git = "https://github.com/DGriffin91/embree4-rs", branch = "obvhs" }
+embree4-rs = { git = "https://github.com/DGriffin91/embree4-rs", branch = "obvhs", optional = true }
 
 traversable = { path = "traversable/" }
 
@@ -71,7 +73,7 @@ opt-level = 3
 
 [features]
 #default = ["tinybvh", "embree"]
-embree = ["dep:obvhs_embree", "dep:embree4-sys"]
+embree = ["dep:obvhs_embree", "dep:embree4-sys", "dep:embree4-rs"]
 tinybvh = ["dep:tinybvh-rs"]
 
 # Traversal is always parallel
