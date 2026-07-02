@@ -60,7 +60,7 @@ impl Timestamp {
     }
 
     pub fn unmap(&self, slice: BufferSlice<'_>) -> Duration {
-        let timing_data = slice.get_mapped_range();
+        let timing_data = slice.get_mapped_range().unwrap();
         let timings = timing_data
             .chunks_exact(8)
             .map(|b| u64::from_ne_bytes(b.try_into().unwrap()))
@@ -74,7 +74,12 @@ impl Timestamp {
 
     pub fn get_ms(&self, device: &Device) -> f32 {
         let timestamp_slice = self.map();
-        device.poll(PollType::Wait).unwrap();
+        device
+            .poll(PollType::Wait {
+                submission_index: None,
+                timeout: None,
+            })
+            .unwrap();
         let time_ms = self.unmap(timestamp_slice).as_secs_f32() * 1000.0;
         time_ms
     }

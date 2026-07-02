@@ -10,8 +10,8 @@ use crate::{
 
 use glam::*;
 use obvhs::triangle::Triangle;
-use std::{mem, num::NonZeroU64, path::PathBuf, time::Instant};
-use wgpu::{util::make_spirv_raw, wgt::CreateShaderModuleDescriptorPassthrough};
+use std::{borrow::Cow, mem, num::NonZeroU64, path::PathBuf, time::Instant};
+use wgpu::{util::make_spirv_raw, CurrentSurfaceTexture::Success};
 use wgpu::{
     util::{initialize_adapter_from_env_or_default, DeviceExt},
     *,
@@ -43,9 +43,14 @@ pub fn start(
         triangles,
         options,
         scene,
-        ShaderModuleDescriptorSpirV {
+        ShaderModuleDescriptorPassthrough {
+            entry_points: Cow::Borrowed(&[PassthroughShaderEntryPoint {
+                name: "main".into(),
+                workgroup_size: (8, 8, 1),
+            }]),
             label: Some(&dst_string),
-            source: make_spirv_raw(&slang_spv),
+            spirv: Some(make_spirv_raw(&slang_spv)),
+            ..Default::default()
         },
         benchmark_seconds,
     ));
@@ -57,7 +62,7 @@ async fn start_internal(
     triangles: &[Vec<Triangle>],
     options: &Options,
     scene: &Scene,
-    shader_module: ShaderModuleDescriptorSpirV<'_>,
+    shader_module: ShaderModuleDescriptorPassthrough<'_>,
     benchmark_seconds: f32,
 ) -> f32 {
     let mut vertex_data = Vec::new();
@@ -93,16 +98,21 @@ async fn start_internal(
         .build(&event_loop)
         .unwrap();
 
-    let instance = Instance::new(&InstanceDescriptor {
+    let instance = Instance::new(InstanceDescriptor {
         flags: InstanceFlags::default(),
         backends: Backends::PRIMARY,
         backend_options: BackendOptions {
             dx12: Dx12BackendOptions {
                 shader_compiler: Dx12Compiler::default_dynamic_dxc(),
+                presentation_system: Default::default(),
+                latency_waitable_object: Default::default(),
+                force_shader_model: Default::default(),
+                agility_sdk: Default::default(),
             },
             ..Default::default()
         },
-        ..Default::default()
+        memory_budget_thresholds: MemoryBudgetThresholds::default(),
+        display: None,
     });
 
     let surface = instance.create_surface(&window).unwrap();
@@ -115,14 +125,15 @@ async fn start_internal(
         | Features::TIMESTAMP_QUERY_INSIDE_PASSES
         | Features::TEXTURE_ADAPTER_SPECIFIC_FORMAT_FEATURES
         | Features::EXPERIMENTAL_RAY_QUERY
-        | Features::EXPERIMENTAL_RAY_TRACING_ACCELERATION_STRUCTURE
-        | Features::SPIRV_SHADER_PASSTHROUGH
-        | Features::PUSH_CONSTANTS;
+        | Features::EXPERIMENTAL_RAY_HIT_VERTEX_RETURN
+        //| Features::EXPERIMENTAL_RAY_TRACING_ACCELERATION_STRUCTURE
+        | Features::PASSTHROUGH_SHADERS
+        | Features::IMMEDIATES;
 
     let mut limits = Limits::default().using_minimum_supported_acceleration_structure_values();
     limits.max_storage_buffer_binding_size = adapter.limits().max_storage_buffer_binding_size;
     limits.max_buffer_size = adapter.limits().max_buffer_size;
-    limits.max_push_constant_size = 32;
+    limits.max_immediate_size = 32;
 
     let (device, queue) = adapter
         .request_device(&DeviceDescriptor {
@@ -131,6 +142,7 @@ async fn start_internal(
             required_limits: limits,
             memory_hints: MemoryHints::default(),
             trace: Trace::Off,
+            experimental_features: unsafe { ExperimentalFeatures::enabled() },
         })
         .await
         .expect("Failed to create device");
@@ -147,11 +159,7 @@ async fn start_internal(
     drop(instance);
     drop(adapter);
 
-    let module = unsafe {
-        device.create_shader_module_passthrough(CreateShaderModuleDescriptorPassthrough::SpirV(
-            shader_module,
-        ))
-    };
+    let module = unsafe { device.create_shader_module_passthrough(shader_module) };
     let output_texture = device.create_texture(&TextureDescriptor {
         label: Some("output_texture"),
         size: Extent3d {
@@ -194,11 +202,8 @@ async fn start_internal(
 
     let pipeline_layout = device.create_pipeline_layout(&PipelineLayoutDescriptor {
         label: None,
-        bind_group_layouts: &[&bind_group_layout],
-        push_constant_ranges: &[PushConstantRange {
-            stages: ShaderStages::COMPUTE,
-            range: 0..4,
-        }],
+        bind_group_layouts: &[Some(&bind_group_layout)],
+        immediate_size: 4,
     });
 
     let compute_pipeline = device.create_compute_pipeline(&ComputePipelineDescriptor {
@@ -362,8 +367,7 @@ async fn start_internal(
                                 cpass.set_bind_group(0, &bind_group, &[]);
                                 cpass.set_pipeline(&compute_pipeline);
                                 if options.animate {
-                                    cpass
-                                        .set_push_constants(0, &(frame_count as u32).to_le_bytes());
+                                    cpass.set_immediates(0, &(frame_count as u32).to_le_bytes());
                                 }
                                 if options.benchmark {
                                     // With this extra dispatch, the following timestamp will be much more consistent.
@@ -380,9 +384,9 @@ async fn start_internal(
                                 }
                             }
 
-                            let frame = surface
-                                .get_current_texture()
-                                .expect("Failed to acquire next swap chain texture");
+                            let Success(frame) = surface.get_current_texture() else {
+                                panic!("Failed to acquire next swap chain texture");
+                            };
 
                             encoder.copy_texture_to_texture(
                                 TexelCopyTextureInfo {
@@ -410,7 +414,7 @@ async fn start_internal(
 
                             queue.submit(Some(encoder.finish()));
 
-                            frame.present();
+                            queue.present(frame);
 
                             if options.benchmark {
                                 let time_ms = timestamp.get_ms(&device);
