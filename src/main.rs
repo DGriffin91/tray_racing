@@ -17,7 +17,7 @@ use auto_tune::tune;
 
 use bytemuck::{Pod, Zeroable};
 
-use glam::{vec3, Mat4, Vec3, Vec3A};
+use glam::{camera::rh, vec3, Mat4, Vec3, Vec3A};
 use obvhs::{
     bvh2::builder::build_bvh2_from_tris, ploc::SortPrecision, test_util::geometry::demoscene,
     triangle::Triangle, BvhBuildParams,
@@ -602,10 +602,13 @@ unsafe impl Zeroable for ViewUniform {}
 impl ViewUniform {
     fn from_camera(cam: &Camera, width: f32, height: f32, tlas_start: u32) -> Self {
         let aspect_ratio = width / height;
-        let proj_inv =
-            Mat4::perspective_infinite_reverse_rh(cam.fov.to_radians(), aspect_ratio, 0.01)
-                .inverse();
-        let view_inv = Mat4::look_at_rh(cam.eye, cam.look_at, Vec3::Y).inverse();
+        let proj_inv = rh::proj::directx::perspective_infinite_reverse(
+            cam.fov.to_radians(),
+            aspect_ratio,
+            0.01,
+        )
+        .inverse();
+        let view_inv = rh::view::look_at_mat4(cam.eye, cam.look_at, Vec3::Y).inverse();
         ViewUniform {
             view_inv,
             proj_inv,

@@ -15,10 +15,10 @@ futures = { version = "0.3", default-features = false, features = [
 ] }
 structopt = "0.3"
 bytemuck = "1"
-image = "0.24"
+image = { version = "0.25", default-features = false, features = ["png"] }
 winit = "0.29"
 tabled = "0.15"
-glam = { version = "0.33", features = ["bytemuck", "serde"] }
+glam = { version = "0.34", features = ["bytemuck", "serde"] }
 ron = "0.8"
 serde = { version = "1", features = ["derive"] }
 rayon = "1.10"
